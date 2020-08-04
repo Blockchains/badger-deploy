@@ -1,0 +1,12 @@
+[submodule "dependencies/uFragments"]
+  path = dependencies/uFragments
+  url = https://github.com/ampleforth/uFragments
+[submodule "dependencies/market-oracle"]
+  path = dependencies/market-oracle
+  url = https://github.com/ampleforth/market-oracle
+[submodule "dependencies/token-geyser"]
+  path = dependencies/token-geyser
+  url = https://github.com/ampleforth/token-geyser
+[submodule "dependencies/uniswap-v2-periphery"]
+  path = dependencies/uniswap-v2-periphery
+  url = https://github.com/Uniswap/uniswap-v2-periphery
