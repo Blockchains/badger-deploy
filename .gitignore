@@ -1,5 +1,11 @@
 node_modules/
-dependencies/uFragments/node_modules
-dependencies/market-oracle/node_modules
-dependencies/token-geyser/node_modules
-dependencies/uniswap-v2-periphery/node_modules
+dependencies
+.openzeppelin/.session
+
+node_modules
+
+.env
+
+#Buidler files
+cache
+artifacts
