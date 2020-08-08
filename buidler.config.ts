@@ -12,4 +12,11 @@ task("accounts", "Prints the list of accounts", async (taskArgs, bre) => {
   }
 });
 
-export default {};
+export default {
+  defaultNetwork: "buidlerevm",
+  networks: {
+    buidlerevm: {
+      blockGasLimit: 12500000
+    },
+  },
+};

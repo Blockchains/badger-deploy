@@ -2,8 +2,15 @@
   "name": "rebase-contracts",
   "version": "0.0.1",
   "repository": "https://github.com/Rebase-Finance/rebase-contracts.git",
+  "scripts": {
+    "lint": "npx prettier ./deploy/*.ts --check",
+    "lint:fix": "npx prettier ./deploy/*.ts --write"
+  },
   "dependencies": {
-    "@openzeppelin/cli": "^2.8.2"
+    "@openzeppelin/cli": "^2.8.2",
+    "@openzeppelin/contracts": "^3.1.0",
+    "@types/lodash": "^4.14.159",
+    "lodash": "^4.17.19"
   },
   "devDependencies": {
     "@nomiclabs/buidler": "^1.4.3",

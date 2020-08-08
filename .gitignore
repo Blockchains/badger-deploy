@@ -6,6 +6,8 @@ node_modules
 
 .env
 
+.DS_STORE
+
 #Buidler files
 cache
 artifacts
