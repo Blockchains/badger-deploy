@@ -14,7 +14,7 @@
 `./scripts/clone-submodules.sh`
 `./scripts/install-dependencies.sh`
 
-4. Return to earlier node version
+4. Return to modern node version
 
 5. Compile dependency contracts
 `./scripts/compile-dependencies.sh`

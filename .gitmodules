@@ -13,3 +13,6 @@
 [submodule "dependencies/uniswap-v2-core"]
 	path = dependencies/uniswap-v2-core
 	url = https://github.com/Uniswap/uniswap-v2-core
+[submodule "dependencies/rebase-oracles"]
+	path = dependencies/rebase-oracles
+	url = https://github.com/Rebase-Finance/rebase-oracles
