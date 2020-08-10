@@ -28,6 +28,10 @@ import UniswapV2ERC20 from '../dependencies/uniswap-v2-core/build/UniswapV2ERC20
 import { v2Fixture } from '../dependencies/uniswap-v2-periphery/test/shared/fixtures'
 import { deployUniswapSystem } from './uniswap/deploy'
 
+// Geyser
+import TokenGeyser from '../dependencies/token-geyser/build/contracts/TokenGeyser.json'
+import TokenPool from '../dependencies/token-geyser/build/contracts/TokenPool.json'
+
 export interface RebaseParams {
   baseToken: {
     owner: string
@@ -66,6 +70,10 @@ export interface RebaseParams {
   }
 }
 
+const overrides = {
+  gasLimit: 9999999
+}
+
 export class RebaseSystem {
   // Rebase Core
   baseToken!: Contract
@@ -95,6 +103,10 @@ export class RebaseSystem {
   weth!: Contract
   stablecoin!: Contract
 
+  // Geyser
+  stakingTokenAddress!: string
+  distributionTokenAddress!: string
+  tokenGeyser!: Contract
   deployed!: boolean
 
   async deploySystem(config: RebaseConfig, provider: providers.BaseProvider, deployer: Signer) {
@@ -105,23 +117,26 @@ export class RebaseSystem {
     this.systemOwner = externalContracts.systemOwner
 
     if (config.network === 'local') {
-      console.log('Deploy local Uniswap system...')
       const uniswap = await deployUniswapSystem(deployer)
       this.uniswapV2Factory = uniswap.factoryV2
       this.uniswapV2Router = uniswap.router02
       this.weth = uniswap.WETH
       this.stablecoin = uniswap.token0
+      console.log('Deployed local Uniswap system ✔️')
     } else {
-      console.log('Connect to uniswap system...')
       await this.connectUniswapSystem(config, deployer)
+      console.log('Connected to uniswap system ✔️')
     }
 
-    console.log('Deploy core contracts...')
     this.baseToken = await deployContract(deployer, UFragments)
     this.supplyPolicy = await deployContract(deployer, UFragmentsPolicy)
     this.orchestrator = await deployContract(deployer, Orchestrator, [this.supplyPolicy.address])
+    console.log(`Deployed core contracts ✔
+    baseToken: ${this.baseToken.address}
+    supplyPolicy: ${this.supplyPolicy.address}
+    orchestrator: ${this.orchestrator.address}
+    `)
 
-    console.log('Deploy median oracles...')
     this.marketMedianOracle = await deployContract(deployer, MedianOracle, [
       marketOracleParams.reportExpirationTimeSec,
       marketOracleParams.reportDelaySec,
@@ -132,19 +147,24 @@ export class RebaseSystem {
       cpiOracleParams.reportDelaySec,
       cpiOracleParams.minimumProviders
     ])
+    console.log(`Deployed median oracles ✔️
+    marketMedianOracle: ${this.marketMedianOracle.address}
+    cpiMedianOracle: ${this.cpiMedianOracle.address}
+    `)
 
     // Sends full initial supply to msg.sender in initialize();
-    console.log('Configure base token...')
     await this.baseToken.functions['initialize(address)'](deployerAddress) // TODO: Name, symbol, decimals are hardcoded
     await this.baseToken.setMonetaryPolicy(this.supplyPolicy.address)
+    console.log('Configured base token ✔️')
 
     // The DAO will need to set all of these, unless an initial owner is set for deployment which initializes all parameters and then transfers functionality to the DAO, like it does here
-    console.log('Configure supply policy...')
     await this.supplyPolicy.functions['initialize(address,address,uint256)'](
       deployerAddress,
       this.baseToken.address,
       rebaseParams.baseCpi
     )
+    console.log('Configured supply policy ✔️')
+
     await this.supplyPolicy.setCpiOracle(this.cpiMedianOracle.address)
     await this.supplyPolicy.setMarketOracle(this.marketMedianOracle.address)
     await this.supplyPolicy.setDeviationThreshold(rebaseParams.deviationThreshold)
@@ -164,6 +184,9 @@ export class RebaseSystem {
     const pairAddress = await this.uniswapV2Factory.getPair(this.weth.address, this.baseToken.address)
 
     this.uniswapPool = new Contract(pairAddress, UniswapV2Pair.abi, deployer)
+    this.stakingTokenAddress = pairAddress
+    console.log(`Deployed Uniswap WETH-BASE pool ✔️
+    uniswapPool: ${pairAddress}`)
   }
 
   async deployDataSources(config: RebaseConfig, deployer: Signer) {
@@ -210,6 +233,21 @@ export class RebaseSystem {
     this.uniswapV2Factory = new Contract(config.externalContracts.uniswapV2Factory, UniswapV2Factory.abi, deployer)
     this.weth = new Contract(config.externalContracts.weth, IERC20.abi, deployer)
     this.stablecoin = new Contract(config.externalContracts.dai, IERC20.abi, deployer)
+  }
+
+  async deployGeyser(config: RebaseConfig, deployer: Signer) {
+    this.distributionTokenAddress = this.baseToken.address // TODO: Let this be the goverance token
+    const { tokenGeyser } = config
+    this.tokenGeyser = await deployContract(deployer, TokenGeyser, [
+      this.stakingTokenAddress,
+      this.distributionTokenAddress,
+      tokenGeyser.maxUnlockSchedules,
+      tokenGeyser.startBonus,
+      tokenGeyser.bonusPeriodSec,
+      tokenGeyser.initialSharesPerToken
+    ], overrides)
+    console.log(`Deployed Token Geyser ✔️
+    tokenGeyser: ${this.tokenGeyser.address}`)
   }
 
   async getCurrentParams() {

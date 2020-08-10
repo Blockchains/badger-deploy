@@ -30,6 +30,14 @@ export interface RebaseConfig {
     reportDelaySec: BigNumber
     minimumProviders: BigNumber
   }
+  tokenGeyser: {
+    distributionTokenAddress: string
+    maxUnlockSchedules: BigNumber
+    startBonus: BigNumber
+    bonusPeriodSec: BigNumber
+    initialSharesPerToken: BigNumber,
+    unlockSchedules: {amount: BigNumber, durationSec: BigNumber}[]
+  }
 }
 
 const ROPSTEN: RebaseConfig = {
@@ -63,6 +71,17 @@ const ROPSTEN: RebaseConfig = {
     reportExpirationTimeSec: BigNumber.from('5356800'),
     reportDelaySec: BigNumber.from(86400),
     minimumProviders: BigNumber.from(1)
+  },
+  tokenGeyser: {
+    distributionTokenAddress: '0xc778417e063141139fce010982780140aa0cd5ab',
+    maxUnlockSchedules: BigNumber.from(10000),
+    startBonus: BigNumber.from(33),
+    bonusPeriodSec: BigNumber.from('5184000'),
+    initialSharesPerToken: BigNumber.from('1000000'),
+    unlockSchedules: [{
+      amount:  BigNumber.from('75000000000000000000'),
+      durationSec:  BigNumber.from('7776000')
+    }]
   }
 }
 

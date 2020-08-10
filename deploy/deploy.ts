@@ -20,19 +20,18 @@ async function main() {
   await rebase.deploySystem(deployConfig, provider, deployer)
 
   // Transfer to DAO
-  console.log('Transfer ownership to DAO...')
-
   await rebase.transferToSystemOwner()
+  console.log('Transfered ownership to DAO ✔️')
 
   // Confirm initial setup
-  console.log('Fetch start parameters...')
   const currentParams = await rebase.getCurrentParams();
+  console.log('Fetched start parameters ✔️')
 
-  console.log('Confirm start parameters...')
   await confirmRebaseParams(deployConfig, currentParams, rebase);
+  console.log('Confirmed start parameters ✔️')
 
   // Deploy liquidity pool
-  // await rebase.deployUniswapPool(deployer);
+  await rebase.deployUniswapPool(deployer);
 
   // Fund liquidity pool
 
@@ -40,6 +39,7 @@ async function main() {
   // await rebase.deployDataSources(deployConfig, deployer);
 
   // Deploy Geyser
+  await rebase.deployGeyser(deployConfig, deployer);
 
   // Confirm Geyser setup
 

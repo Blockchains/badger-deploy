@@ -4,7 +4,8 @@
   "repository": "https://github.com/Rebase-Finance/rebase-contracts.git",
   "scripts": {
     "lint": "npx prettier ./deploy/*.ts --check",
-    "lint:fix": "npx prettier ./deploy/*.ts --write"
+    "lint:fix": "npx prettier ./deploy/*.ts --write",
+    "deploy": "npx buidler run deploy/deploy.ts --show-stack-traces"
   },
   "dependencies": {
     "@openzeppelin/cli": "^2.8.2",
