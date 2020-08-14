@@ -1,15 +1,27 @@
 {
   "manifestVersion": "2.2",
-  "contracts": {},
+  "contracts": {
+    "uFragments": "uFragments",
+    "uFragmentsPolicy": "uFragmentsPolicy",
+    "UFragments": "UFragments"
+  },
   "dependencies": {},
   "name": "rebase-contracts",
   "version": "0.0.1",
   "compiler": {
     "compilerSettings": {
-      "optimizer": {}
+      "optimizer": {
+        "enabled": false,
+        "runs": "200"
+      }
     },
     "typechain": {
       "enabled": false
-    }
-  }
+    },
+    "manager": "openzeppelin",
+    "solcVersion": "0.4.24",
+    "artifactsDir": "build/contracts",
+    "contractsDir": "contracts"
+  },
+  "telemetryOptIn": false
 }

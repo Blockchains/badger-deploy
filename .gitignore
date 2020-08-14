@@ -4,6 +4,7 @@ dependencies
 
 node_modules
 
+
 .env
 
 .DS_STORE
@@ -11,3 +12,4 @@ node_modules
 #Buidler files
 cache
 artifacts
+build

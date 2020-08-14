@@ -5,13 +5,17 @@
   "scripts": {
     "lint": "npx prettier ./deploy/*.ts --check",
     "lint:fix": "npx prettier ./deploy/*.ts --write",
-    "deploy": "npx buidler run deploy/deploy.ts --show-stack-traces"
+    "deploy-local": "npx buidler run deploy/deploy.ts --show-stack-traces --no-compile",
+    "deploy-rinkeby": "npx buidler run deploy/deploy.ts --show-stack-traces --no-compile --network rinkeby"
   },
   "dependencies": {
     "@openzeppelin/cli": "^2.8.2",
     "@openzeppelin/contracts": "^3.1.0",
     "@types/lodash": "^4.14.159",
-    "lodash": "^4.17.19"
+    "dotenv": "^8.2.0",
+    "lodash": "^4.17.19",
+    "openzeppelin-eth": "^2.0.2",
+    "truffle-hdwallet-provider": "^1.0.17"
   },
   "devDependencies": {
     "@nomiclabs/buidler": "^1.4.3",

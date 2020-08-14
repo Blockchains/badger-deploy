@@ -8,17 +8,17 @@ import { deployContract } from 'ethereum-waffle'
 
 import { expandTo18Decimals } from './utilities'
 
-import UniswapV2Factory from '../../dependencies/uniswap-v2-core/build/UniswapV2Factory.json'
-import IUniswapV2Pair from '../../dependencies/uniswap-v2-core/build/IUniswapV2Pair.json'
+import UniswapV2Factory from '../../dependency-artifacts/uniswap-v2-core/UniswapV2Factory.json'
+import IUniswapV2Pair from '../../dependency-artifacts/uniswap-v2-core/IUniswapV2Pair.json'
 
-import ERC20 from '../../dependencies/uniswap-v2-periphery/build/ERC20.json'
-import WETH9 from '../../dependencies/uniswap-v2-periphery/build/WETH9.json'
-import UniswapV1Exchange from '../../dependencies/uniswap-v2-periphery/build/UniswapV1Exchange.json'
-import UniswapV1Factory from '../../dependencies/uniswap-v2-periphery/build/UniswapV1Factory.json'
-import UniswapV2Router01 from '../../dependencies/uniswap-v2-periphery/build/UniswapV2Router01.json'
-import UniswapV2Migrator from '../../dependencies/uniswap-v2-periphery/build/UniswapV2Migrator.json'
-import UniswapV2Router02 from '../../dependencies/uniswap-v2-periphery/build/UniswapV2Router02.json'
-import RouterEventEmitter from '../../dependencies/uniswap-v2-periphery/build/RouterEventEmitter.json'
+import ERC20 from '../../dependency-artifacts/uniswap-v2-periphery/ERC20.json'
+import WETH9 from '../../dependency-artifacts/uniswap-v2-periphery/WETH9.json'
+import UniswapV1Exchange from '../../dependency-artifacts/uniswap-v2-periphery/UniswapV1Exchange.json'
+import UniswapV1Factory from '../../dependency-artifacts/uniswap-v2-periphery/UniswapV1Factory.json'
+import UniswapV2Router01 from '../../dependency-artifacts/uniswap-v2-periphery/UniswapV2Router01.json'
+import UniswapV2Migrator from '../../dependency-artifacts/uniswap-v2-periphery/UniswapV2Migrator.json'
+import UniswapV2Router02 from '../../dependency-artifacts/uniswap-v2-periphery/UniswapV2Router02.json'
+import RouterEventEmitter from '../../dependency-artifacts/uniswap-v2-periphery/RouterEventEmitter.json'
 
 const overrides = {
   gasLimit: 9999999
