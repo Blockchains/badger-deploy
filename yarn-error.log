@@ -1,5 +1,5 @@
 Arguments: 
-  /usr/local/bin/node /usr/local/Cellar/yarn/1.22.4/libexec/bin/yarn.js add openzeppelin-eth
+  /usr/local/bin/node /usr/local/Cellar/yarn/1.22.4/libexec/bin/yarn.js add @aragon/templates-shared
 
 PATH: 
   /usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Users/thomas/.cargo/bin:/usr/local/share/dotnet:~/.dotnet/tools
@@ -37,11 +37,14 @@ npm manifest:
       "deploy-rinkeby": "npx buidler run deploy/deploy.ts --show-stack-traces --no-compile --network rinkeby"
     },
     "dependencies": {
+      "@aragon/cli": "^7.1.6",
       "@openzeppelin/cli": "^2.8.2",
       "@openzeppelin/contracts": "^3.1.0",
       "@types/lodash": "^4.14.159",
       "dotenv": "^8.2.0",
-      "lodash": "^4.17.19"
+      "lodash": "^4.17.19",
+      "openzeppelin-eth": "^2.0.2",
+      "truffle-hdwallet-provider": "^1.0.17"
     },
     "devDependencies": {
       "@nomiclabs/buidler": "^1.4.3",

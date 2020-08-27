@@ -18,6 +18,7 @@ export default {
   defaultNetwork: "buidlerevm",
   networks: {
     buidlerevm: {
+      chaindId: 31337,
       blockGasLimit: 12500000
     },
     rinkeby: {

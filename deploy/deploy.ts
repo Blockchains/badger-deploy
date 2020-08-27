@@ -1,15 +1,18 @@
 import { run, ethers } from '@nomiclabs/buidler'
 import { deployContract, MockProvider, solidity } from 'ethereum-waffle'
 import Web3 from 'web3'
-import { RebaseSystem } from './RebaseSystem'
+import { BadgerSystem } from './BadgerSystem'
 import config from './config'
 import { confirmRebaseParams } from './test/rebaseCoreTest'
 import dotenv from 'dotenv'
 const HDWalletProvider = require('truffle-hdwallet-provider')
 import { getDeployed } from './existing'
 
-export const network = 'rinkeby'
-export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
+export enum ChainIds {
+  MAINNET = 1,
+  RINKEBY = 4,
+  LOCAL = 31337
+}
 
 dotenv.config()
 const web3Provider = new HDWalletProvider(
@@ -19,49 +22,58 @@ const web3Provider = new HDWalletProvider(
 
 async function main() {
   const signers = await ethers.getSigners()
-  const provider = await ethers.getDefaultProvider(network)
+  const provider = await ethers.getDefaultProvider()
 
-  console.log('Network: ', provider.network.name)
   const deployer = signers[0]
-
   const web3 = new Web3(web3Provider)
 
   const deployConfig = config.RINKEBY
-  const rebase = new RebaseSystem()
+  deployConfig.network = ChainIds.LOCAL
+  const badger = new BadgerSystem(deployConfig, web3, deployer)
 
-  // Initial Deploy
-  await rebase.deploySystem(deployConfig, web3, deployer)
-  await rebase.deployDataSources(web3, deployConfig, deployer)
+  console.log('---Connect or Deploy External Dependencies---')
+  await badger.connectOrDeployUniswap()
+  await badger.connectOrDeployStakingAssets()
 
-  // Already Deployed
-  // const deployment = getDeployed(network)
-  // await rebase.connectToSystem(deployment, deployer)
+  console.log('---Deploy DAO---')
+  await badger.deployDAO()
 
-  await rebase.initializeSupplyPolicy(deployConfig, web3, deployer)
-  await rebase.initializeSystem(deployConfig, web3, deployer)
+  console.log('---Deploy DIGG Core---')
+  await badger.deployCore()
 
-  // Deploy liquidity pool
-  // await rebase.deployUniswapPool(deployer);
-  // rebase.toJson(network)
+  console.log('---Deploy DIGG Oracles---')
+  await badger.deployDiggOracles()
 
-  // Deploy Geyser
-  // await rebase.deployGeyser(deployConfig, deployer);
-  // rebase.toJson(network)
+  console.log('---Initialize DIGG Parameters---')
+  await badger.initializeCore()
+
+  console.log('---Deploy Liquidity Pools---')
+  await badger.deployUniswapPools()
+  await badger.deployBalancerPools()
+
+  console.log('---Deploy Distribution Pools---')
+  await badger.deployDistributionPools()
 
   // Confirm initial setup
-  // const currentParams = await rebase.getCurrentParams()
+  // const currentParams = await getCurrentParams(badger)
   // console.log('Fetched start parameters ✔️')
 
   // await confirmRebaseParams(deployConfig, currentParams, rebase)
   // console.log('Confirmed start parameters ✔️')
 
-  // Confirm Geyser setup
+  // Confirm Liquidity pool setup
 
-  // Distribute BASE and gBASE tokens to contributors via TokenRequestApp
+  // Confirm Distribution pool setup
 
-  // Lock gBASE in Geyser
+  /*
+    DAO Setup
+      Mint initial Badger supply
+      Burn minting capability
+      Send 50% to distribution pools, send 50% to Agent timelock
 
-  // Fund liquidity pool
+    Digg Setup
+      Send 50% of supply to distribution pools, send 50% to Agent timelock
+  */
 
   // Transfer to DAO
   // await rebase.transferToDao()

@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 import { utils } from 'ethers'
-import { RebaseConfig } from '../config'
-import { RebaseSystem, RebaseParams } from '../RebaseSystem'
+import { SystemConfig } from '../config'
+import { BadgerSystem, RebaseParams } from '../BadgerSystem'
 
 // TODO: Handling gaps in array
 // export const getArrayElements = async (contract: Contract, functionName: string) => {
@@ -15,9 +15,9 @@ import { RebaseSystem, RebaseParams } from '../RebaseSystem'
 // }
 
 export const confirmRebaseParams = async (
-  config: RebaseConfig,
+  config: SystemConfig,
   rebaseParams: RebaseParams,
-  rebaseSystem: RebaseSystem
+  rebaseSystem: BadgerSystem
 ) => {
   // expect(rebaseParams.baseToken.totalSupply).to.be.eq(config.)
 
