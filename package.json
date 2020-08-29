@@ -14,7 +14,9 @@
     "@openzeppelin/cli": "^2.8.2",
     "@openzeppelin/contracts": "^3.1.0",
     "@types/lodash": "^4.14.159",
+    "colors": "^1.4.0",
     "dotenv": "^8.2.0",
+    "flat": "^5.0.2",
     "lodash": "^4.17.19",
     "openzeppelin-eth": "^2.0.2",
     "truffle-hdwallet-provider": "^1.0.17"

@@ -1,17 +1,26 @@
 import { run, ethers } from '@nomiclabs/buidler'
 import { deployContract } from 'ethereum-waffle'
 import { Contract, Signer, BigNumber, utils } from 'ethers'
-import { SystemConfig, PoolAssets, Special, poolAssetMetadata, externalPoolAddresses } from './config'
+import {
+  SystemConfig,
+  PoolAssets,
+  Special,
+  poolAssetMetadata,
+  externalPoolAddresses,
+  daysToSeconds,
+  TrancheConfig
+} from './badgerConfig'
 import * as _ from 'lodash'
+import { colors } from './deploy'
 
 // OZ SDK
 import Web3 from 'web3'
 import { Contracts, ProxyAdminProject, ZWeb3 } from '@openzeppelin/upgrades'
 
 // Rebase Core
-import UFragments from '../dependency-artifacts/uFragments/UFragments.json'
-import UFragmentsPolicy from '../dependency-artifacts/uFragments/UFragmentsPolicy.json'
-import Orchestrator from '../dependency-artifacts/uFragments/Orchestrator.json'
+import UFragments from '../dependency-artifacts/digg-core/UFragments.json'
+import UFragmentsPolicy from '../dependency-artifacts/digg-core/UFragmentsPolicy.json'
+import Orchestrator from '../dependency-artifacts/digg-core/Orchestrator.json'
 
 // Oracles
 import MedianOracle from '../dependency-artifacts/market-oracle/MedianOracle.json'
@@ -23,6 +32,7 @@ import IERC20 from '../dependency-artifacts/rebase-oracle/IERC20.json'
 import ERC20Detailed from '../dependency-artifacts/uFragments/ERC20Detailed.json'
 import ERC20PresetMinterPauser from '../dependency-artifacts/openzeppelin-contracts/ERC20PresetMinterPauser.json'
 import WETH9 from '../dependency-artifacts/uniswap-v2-periphery/WETH9.json'
+import TokenTimelock from '../dependency-artifacts/openzeppelin-contracts/TokenTimelock.json'
 
 // Liquidity
 import UniswapV2Pair from '../dependency-artifacts/uniswap-v2-core/UniswapV2Pair.json'
@@ -53,52 +63,6 @@ export interface Tranche {
   totalAmount: BigNumber
   duration: BigNumber
   pools: Pool[]
-}
-
-export interface RebaseParams {
-  baseToken: {
-    owner: string
-    monetaryPolicy: string
-    totalSupply: BigNumber
-  }
-  supplyPolicy: {
-    owner: string
-    uFrags: string
-    deviationThreshold: BigNumber
-    rebaseLag: BigNumber
-    minRebaseTimeIntervalSec: BigNumber
-    rebaseWindowOffsetSec: BigNumber
-    rebaseWindowLengthSec: BigNumber
-    epoch: BigNumber
-    orchestrator: string
-  }
-  marketOracle: {
-    owner: string
-    providers: string[]
-    reportExpirationTimeSec: BigNumber
-    reportDelaySec: BigNumber
-    minimumProviders: BigNumber
-  }
-  cpiOracle: {
-    owner: string
-    providers: string[]
-    reportExpirationTimeSec: BigNumber
-    reportDelaySec: BigNumber
-    minimumProviders: BigNumber
-  }
-  orchestrator: {
-    owner: string
-    policy: string
-    transactions: string[]
-  }
-  tokenGeyser?: {
-    stakingTokenAddress: string
-    daoGovernanceToken: string
-    maxUnlockSchedules: BigNumber
-    startBonus: BigNumber
-    bonusPeriodSec: BigNumber
-    initialSharesPerToken: BigNumber
-  }
 }
 
 const overrides = {
@@ -154,6 +118,11 @@ export interface StakingAssets {
   [index: string]: Contract
 }
 
+export interface DaoTimelocks {
+  badgerTimelock: Contract
+  diggTimeLock: Contract
+}
+
 export class BadgerSystem {
   diggCore!: DiggCore
   diggOracles!: DiggOracles
@@ -165,6 +134,7 @@ export class BadgerSystem {
   badgerDistributionPools!: BadgerDistributionPools
   diggDistributionPools!: DiggDistributionPools
   stakingAssets!: StakingAssets
+  daoTimelocks!: DaoTimelocks
 
   config: SystemConfig
   web3: Web3
@@ -204,11 +174,17 @@ export class BadgerSystem {
   }
 
   async deployCore() {
-    const { externalContracts, rebaseSystem, rebaseParams, marketOracleParams, cpiOracleParams } = this.config
+    const {
+      externalContracts,
+      rebaseSystem,
+      diggParams: rebaseParams,
+      marketOracleParams,
+      cpiOracleParams
+    } = this.config
     const { deployer } = this
     const deployerAddress = await deployer.getAddress()
 
-    ZWeb3.initialize(this.web3.currentProvider)
+    // ZWeb3.initialize(this.web3.currentProvider)
 
     const baseToken = await deployContract(deployer, UFragments)
     const baseTokenLogic = baseToken
@@ -255,7 +231,7 @@ export class BadgerSystem {
 
   async deployDiggOracles() {
     const {
-      config: { marketOracleParams, rebaseParams, centralizedOracleParams, cpiOracleParams },
+      config: { marketOracleParams, diggParams: rebaseParams, centralizedOracleParams, cpiOracleParams },
       web3,
       deployer
     } = this
@@ -311,6 +287,8 @@ export class BadgerSystem {
     tx = await marketMedianOracle.addProvider(centralizedMarketOracle.address)
     await tx.wait()
 
+    console.log(centralizedMarketOracle.functions)
+
     this.diggOracles = {
       marketMedianOracle,
       cpiMedianOracle,
@@ -329,7 +307,7 @@ export class BadgerSystem {
 
   async initializeCore() {
     const { config, deployer } = this
-    const { externalContracts, rebaseSystem, rebaseParams, marketOracleParams, cpiOracleParams } = config
+    const { externalContracts, rebaseSystem, diggParams: rebaseParams, marketOracleParams, cpiOracleParams } = config
     const { diggToken: baseToken, supplyPolicy, orchestrator } = this.diggCore
     const { marketMedianOracle, cpiMedianOracle } = this.diggOracles
 
@@ -408,6 +386,9 @@ export class BadgerSystem {
     uniswapPool: ${this.uniswapPools.diggEthPool.address}`)
 
     this.stakingAssets[PoolAssets.LP_UNI_DIGG] = this.uniswapPools.diggEthPool
+
+    // Add BADGER to staking assets as well
+    this.stakingAssets[PoolAssets.BADGER] = this.fakeDAO.badgerToken
   }
 
   async deployBalancerPools() {
@@ -517,15 +498,94 @@ export class BadgerSystem {
     this.stakingAssets = stakingAssets
   }
 
+  private getTimelockRelease() {
+    const { config } = this
+    return config.trancheStart.add(config.tokenLockParams.lockDuration)
+  }
+
+  private async deployPoolsForTranche(
+    tranche: TrancheConfig,
+    distributionToken: Contract,
+    tokenDisplayUnit: string
+  ): Promise<Pool[]> {
+    const { config, deployer } = this
+    console.log(`Starting tranche ${tranche.id}`)
+
+    const pools = [] as Pool[]
+
+    const trancheStart = config.trancheStart.add(tranche.startTimeOffset)
+    let segments = BigNumber.from(0)
+
+    tranche.pools.forEach(pool => {
+      segments = segments.add(pool.rewardMultiplier ? pool.rewardMultiplier : 1)
+    })
+
+    console.log(`Total funding divisor for ${tranche.id}: ${segments}`)
+
+    for (const pool of tranche.pools) {
+      const assetContract = this.stakingAssets[pool.asset]
+
+      // Deploy pool
+      const poolAmount = tranche.totalAmount.mul(pool.rewardMultiplier ? pool.rewardMultiplier : 1).div(segments)
+
+      const poolContract = await deployContract(
+        deployer,
+        TokenGeyser,
+        [
+          assetContract.address,
+          distributionToken.address,
+          config.tokenGeyser.maxUnlockSchedules,
+          config.tokenGeyser.startBonus,
+          config.tokenGeyser.bonusPeriodSec,
+          config.tokenGeyser.initialSharesPerToken,
+          trancheStart
+        ],
+        overrides
+      )
+
+      // Add unlock schedule
+      let tx = await distributionToken.approve(poolContract.address, ethers.constants.MaxUint256)
+      await tx.wait()
+
+      tx = await poolContract.lockTokens(poolAmount, tranche.duration, trancheStart)
+      await tx.wait()
+      console.log(
+        `Deployed distribition pool for tranche ${tranche.id}/${pool.asset} 
+          Pool: ${poolContract.address}
+          Asset: ${assetContract.address}
+          Locked:  ${utils.formatUnits(poolAmount, tokenDisplayUnit)} tokens
+          Starts:  ${trancheStart}, for ${tranche.duration} seconds
+         `
+      )
+
+      pools.push({
+        asset: pool.asset,
+        contract: poolContract,
+        rewardMultiplier: pool.rewardMultiplier ? pool.rewardMultiplier : BigNumber.from(1),
+        special: pool.special ? pool.special : undefined
+      })
+    }
+    return pools
+  }
+
   async deployDistributionPools() {
     const {
       config,
       web3,
       deployer,
-      fakeDAO: { badgerToken }
+      fakeDAO: { badgerToken },
+      diggCore: { diggToken }
     } = this
 
     const now = Math.floor(Date.now() / 1000)
+
+    const badgerSupply = await badgerToken.totalSupply()
+    const diggSupply = await diggToken.totalSupply()
+
+    console.log('badgerSupply ', badgerSupply.toString())
+    console.log('diggSupply ', diggSupply.toString())
+
+    console.log(colors.title('---Deploy BADGER Distribution Pools---'))
 
     for (const tranche of config.badgerTranches) {
       this.badgerDistributionPools.tranches.push({
@@ -533,57 +593,74 @@ export class BadgerSystem {
         duration: tranche.duration,
         totalAmount: tranche.totalAmount,
         startTimeOffset: tranche.startTimeOffset,
-        pools: []
+        pools: await this.deployPoolsForTranche(tranche, badgerToken, 'ether')
       })
-
-      console.log(`Starting tranche ${tranche.id}`)
-
-      const trancheStart = config.trancheStart.add(tranche.startTimeOffset)
-      let segments = BigNumber.from(0)
-
-      tranche.pools.forEach(pool => {
-        segments = segments.add(pool.rewardMultiplier ? pool.rewardMultiplier : 1)
-      })
-
-      console.log(`Total funding divisor for ${tranche.id}: ${segments}`)
-
-      for (const pool of tranche.pools) {
-        const assetContract = this.stakingAssets[pool.asset]
-
-        console.log(pool.asset, !!assetContract, assetContract.address)
-
-        // Deploy pool
-        const poolAmount = tranche.totalAmount.mul(pool.rewardMultiplier ? pool.rewardMultiplier : 1).div(segments)
-
-        const poolContract = await deployContract(
-          deployer,
-          TokenGeyser,
-          [
-            assetContract.address,
-            badgerToken.address,
-            config.tokenGeyser.maxUnlockSchedules,
-            config.tokenGeyser.startBonus,
-            config.tokenGeyser.bonusPeriodSec,
-            config.tokenGeyser.initialSharesPerToken,
-            trancheStart
-          ],
-          overrides
-        )
-
-        // Add unlock schedule
-        let tx = await badgerToken.approve(poolContract.address, ethers.constants.MaxUint256)
-        await tx.wait()
-
-        tx = await poolContract.lockTokens(poolAmount, tranche.duration, trancheStart)
-        await tx.wait()
-        console.log(
-          `Deployed distribition pool for tranche ${tranche.id}/${pool.asset}
-            Address: ${poolContract.address}
-            Locked:  ${utils.formatEther(poolAmount)} tokens
-            Starts:  ${trancheStart}, for ${tranche.duration} seconds
-           `
-        )
-      }
     }
+
+    console.log(colors.title('---Deploy DIGG Distribution Pools---'))
+
+    for (const tranche of config.diggTranches) {
+      this.diggDistributionPools.tranches.push({
+        id: tranche.id,
+        duration: tranche.duration,
+        totalAmount: tranche.totalAmount,
+        startTimeOffset: tranche.startTimeOffset,
+        pools: await this.deployPoolsForTranche(tranche, diggToken, 'gwei')
+      })
+    }
+  }
+  async deployTokenTimelocks() {
+    const {
+      config,
+      web3,
+      deployer,
+      fakeDAO: { daoAgent, badgerToken },
+      diggCore: { diggToken }
+    } = this
+
+    const deployerAddress = await deployer.getAddress()
+
+    const remainingBadger = await badgerToken.balanceOf(deployerAddress)
+    const remainingDigg = await badgerToken.balanceOf(deployerAddress)
+
+    // TODO: Convert DAOAgent to Contract when actual DAO
+    const badgerTimelock = await deployContract(deployer, TokenTimelock, [
+      badgerToken.address,
+      daoAgent,
+      this.getTimelockRelease()
+    ])
+
+    // TODO: Convert DAOAgent to Contract when actual DAO
+    const diggTimeLock = await deployContract(deployer, TokenTimelock, [
+      diggToken.address,
+      daoAgent,
+      this.getTimelockRelease()
+    ])
+
+    let tx = await badgerToken.approve(badgerTimelock.address, ethers.constants.MaxUint256)
+    await tx.wait()
+
+    tx = await badgerToken.transfer(badgerTimelock.address, config.tokenLockParams.badgerLockAmount)
+    await tx.wait()
+
+    tx = await diggToken.approve(diggTimeLock.address, ethers.constants.MaxUint256)
+    await tx.wait()
+
+    tx = await diggToken.transfer(diggTimeLock.address, config.tokenLockParams.diggLockAmount)
+    await tx.wait()
+
+    this.daoTimelocks = {
+      badgerTimelock,
+      diggTimeLock
+    }
+
+    console.log(`Deployed Badger Timelock to ${this.daoTimelocks.badgerTimelock.address})
+      Amount Locked: ${utils.formatEther(config.tokenLockParams.badgerLockAmount)}
+      Unlocks At   : ${this.getTimelockRelease()}
+    `)
+    console.log(`Deployed Digg Timelock to ${this.daoTimelocks.diggTimeLock.address}
+      Amount Locked: ${utils.formatUnits(config.tokenLockParams.badgerLockAmount, 'gwei')}
+      Unlocks At   : ${this.getTimelockRelease()}
+    `)
   }
 }

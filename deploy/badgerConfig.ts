@@ -5,7 +5,7 @@ import { addListener } from 'process'
 const ONE = BigNumber.from(1)
 const TWO = BigNumber.from(2)
 
-const daysToSeconds = (days: number): BigNumber => {
+export const daysToSeconds = (days: number): BigNumber => {
   return BigNumber.from(days).mul(86400)
 }
 
@@ -195,7 +195,12 @@ export interface SystemConfig {
   badgerParams: {
     totalSupply: BigNumber
   }
-  rebaseParams: {
+  tokenLockParams: {
+    badgerLockAmount: BigNumber,
+    diggLockAmount: BigNumber,
+    lockDuration: BigNumber
+  }
+  diggParams: {
     initialSupply: BigNumber
     deviationThreshold: BigNumber
     rebaseLag: BigNumber
@@ -248,12 +253,17 @@ const RINKEBY: SystemConfig = {
     daoGovernanceToken: utils.getAddress('0xb132b08112f627cff1a3be863586cd51dcd42b4c'), // Aragon DAO Governance Token
     weth: utils.getAddress('0xc778417e063141139fce010982780140aa0cd5ab')
   },
+  tokenLockParams: {
+    badgerLockAmount: utils.parseUnits('10500000', 'ether'),
+    diggLockAmount: BigNumber.from(3125)
+    .mul(10 ** 9),
+    lockDuration: daysToSeconds(30)
+  },
   badgerParams: {
     totalSupply: utils.parseUnits('21000000', 'ether')
   },
-  rebaseParams: {
-    initialSupply: BigNumber.from(50)
-      .mul(10 ** 6)
+  diggParams: {
+    initialSupply: BigNumber.from(6250)
       .mul(10 ** 9),
     deviationThreshold: BigNumber.from('50000000000000000'),
     rebaseLag: BigNumber.from(10),

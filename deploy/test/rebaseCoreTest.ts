@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import { utils } from 'ethers'
-import { SystemConfig } from '../config'
+import { SystemConfig } from '../badgerConfig'
 import { BadgerSystem, RebaseParams } from '../BadgerSystem'
 
 // TODO: Handling gaps in array
@@ -33,17 +33,17 @@ export const confirmRebaseParams = async (
     utils.getAddress(rebaseSystem.baseToken.address)
   )
   expect(rebaseParams.supplyPolicy.deviationThreshold, 'supplyPolicy.deviationThreshold').to.be.eq(
-    config.rebaseParams.deviationThreshold
+    config.diggParams.deviationThreshold
   )
-  expect(rebaseParams.supplyPolicy.rebaseLag, 'supplyPolicy.rebaseLag').to.be.eq(config.rebaseParams.rebaseLag)
+  expect(rebaseParams.supplyPolicy.rebaseLag, 'supplyPolicy.rebaseLag').to.be.eq(config.diggParams.rebaseLag)
   expect(rebaseParams.supplyPolicy.minRebaseTimeIntervalSec, 'supplyPolicy.minRebaseTimeIntervalSec').to.be.eq(
-    config.rebaseParams.minRebaseTimeIntervalSec
+    config.diggParams.minRebaseTimeIntervalSec
   )
   expect(rebaseParams.supplyPolicy.rebaseWindowOffsetSec, 'supplyPolicy.rebaseWindowOffsetSec').to.be.eq(
-    config.rebaseParams.rebaseWindowOffsetSec
+    config.diggParams.rebaseWindowOffsetSec
   )
   expect(rebaseParams.supplyPolicy.rebaseWindowLengthSec, 'supplyPolicy.rebaseWindowLengthSec').to.be.eq(
-    config.rebaseParams.rebaseWindowLengthSec
+    config.diggParams.rebaseWindowLengthSec
   )
   expect(rebaseParams.supplyPolicy.epoch, 'supplyPolicy.epoch').to.be.eq(0)
   expect(rebaseParams.supplyPolicy.orchestrator, 'supplyPolicy.orchestrator').to.be.eq(
