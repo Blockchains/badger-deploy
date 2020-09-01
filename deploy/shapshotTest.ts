@@ -15,7 +15,7 @@ export const compareSnapshotToDeploy = (badgerSystem: BadgerSystem, snapshot: Ba
 }
 
 const compareDiggCore = (badgerSystem: BadgerSystem, snapshot: BadgerSnapshot, config: SystemConfig) => {
-  const daoAgent = badgerSystem.fakeDAO.daoAgent
+  const daoAgent = badgerSystem.badgerDAO.daoAgent
 
   expect(snapshot.diggCore.diggToken.totalSupply, 'diggToken.totalSupply').to.be.equal(config.diggParams.initialSupply)
   expect(snapshot.diggCore.diggToken.monetaryPolicy, 'diggToken.monetaryPolicy').to.be.equal(badgerSystem.diggCore.supplyPolicy.address)
@@ -39,7 +39,7 @@ const compareDiggCore = (badgerSystem: BadgerSystem, snapshot: BadgerSnapshot, c
 }
 
 const compareDiggOracles = (badgerSystem: BadgerSystem, snapshot: BadgerSnapshot, config: SystemConfig) => {
-  const daoAgent = badgerSystem.fakeDAO.daoAgent
+  const daoAgent = badgerSystem.badgerDAO.daoAgent
 
   expect(snapshot.diggOracles.marketMedianOracle.owner, 'marketMedianOracle.owner').to.be.equal(daoAgent)
   expect(snapshot.diggOracles.marketMedianOracle.providers, 'marketMedianOracle.providers').to.deep.equal([
@@ -78,11 +78,11 @@ const compareDiggOracles = (badgerSystem: BadgerSystem, snapshot: BadgerSnapshot
 }
 
 const compareDAO = (badgerSystem: BadgerSystem, snapshot: BadgerSnapshot, config: SystemConfig) => {
-  const daoAgent = badgerSystem.fakeDAO.daoAgent
+  const daoAgent = badgerSystem.badgerDAO.daoAgent
 }
 
 const compareBadgerDistributionPools = (badgerSystem: BadgerSystem, snapshot: BadgerSnapshot, config: SystemConfig) => {
-  const daoAgent = badgerSystem.fakeDAO.daoAgent
+  const daoAgent = badgerSystem.badgerDAO.daoAgent
 
   const numBadgerTranches = snapshot.badgerDistributionPools.tranches.length
   const expectedBadgerTranches = config.badgerTranches.length
@@ -107,23 +107,23 @@ const compareBadgerDistributionPools = (badgerSystem: BadgerSystem, snapshot: Ba
 }
 
 const compareDiggDistributionPools = (badgerSystem: BadgerSystem, snapshot: BadgerSnapshot, config: SystemConfig) => {
-  const daoAgent = badgerSystem.fakeDAO.daoAgent
+  const daoAgent = badgerSystem.badgerDAO.daoAgent
 }
 
 // TODO: When Mainnet, compare to real contracts
 const compareStakingAssets = (badgerSystem: BadgerSystem, snapshot: BadgerSnapshot, config: SystemConfig) => {
-  const daoAgent = badgerSystem.fakeDAO.daoAgent
+  const daoAgent = badgerSystem.badgerDAO.daoAgent
 }
 
 const compareDaoTimelocks = (badgerSystem: BadgerSystem, snapshot: BadgerSnapshot, config: SystemConfig) => {
-  const daoAgent = badgerSystem.fakeDAO.daoAgent
+  const daoAgent = badgerSystem.badgerDAO.daoAgent
 
   expect(snapshot.daoTimelocks.badgerTimelock.beneficiary).to.be.equal(daoAgent)
   expect(snapshot.daoTimelocks.badgerTimelock.locked).to.be.equal(config.tokenLockParams.badgerLockAmount)
   expect(snapshot.daoTimelocks.badgerTimelock.releaseTime).to.be.equal(
     config.trancheStart.add(config.tokenLockParams.lockDuration)
   )
-  expect(snapshot.daoTimelocks.badgerTimelock.token).to.be.equal(badgerSystem.fakeDAO.badgerToken.address)
+  expect(snapshot.daoTimelocks.badgerTimelock.token).to.be.equal(badgerSystem.badgerDAO.badgerToken.address)
 
   expect(snapshot.daoTimelocks.diggTimeLock.beneficiary).to.be.equal(daoAgent)
   expect(snapshot.daoTimelocks.diggTimeLock.locked).to.be.equal(config.tokenLockParams.diggLockAmount)

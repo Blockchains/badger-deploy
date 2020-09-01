@@ -99,7 +99,7 @@ export interface DiggOraclesSnapshot {
   }
 }
 
-export interface FakeDAOSnapshot {
+export interface BadgerDAOSnapshot {
   daoAgent: string
   daoFinance: string
   proxyAdmin: string
@@ -167,7 +167,7 @@ export interface DaoTimelocksSnapshot {
 export interface BadgerSnapshot {
   diggCore: DiggCoreSnapshot
   diggOracles: DiggOraclesSnapshot
-  fakeDAO: FakeDAOSnapshot
+  badgerDAO: BadgerDAOSnapshot
   uniswapPools: UniswapPoolsSnapshot
   balancerPools: BalancerPoolsSnapshot
   badgerDistributionPools: DistributionPoolsSnapshot
@@ -242,11 +242,11 @@ export const getSnapshot = async (badger: BadgerSystem): Promise<BadgerSnapshot>
   })
 
   const {
-    fakeDAO: { daoAgent, daoFinance, proxyAdmin, badgerToken },
+    badgerDAO: { daoAgent, daoFinance, proxyAdmin, badgerToken },
     daoTimelocks: { badgerTimelock, diggTimeLock }
   } = badger
 
-  _.set(snapshot, 'fakeDAO', {
+  _.set(snapshot, 'badgerDAO', {
     daoAgent,
     daoFinance,
     proxyAdmin,

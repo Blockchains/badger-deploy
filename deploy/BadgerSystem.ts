@@ -97,7 +97,7 @@ export interface DiggOracles {
   centralizedMarketOracle: Contract
 }
 
-export interface FakeDAO {
+export interface BadgerDAO {
   daoAgent: string
   daoFinance: string
   proxyAdmin: string
@@ -135,7 +135,7 @@ export interface DaoTimelocks {
 export class BadgerSystem {
   diggCore!: DiggCore
   diggOracles!: DiggOracles
-  fakeDAO!: FakeDAO
+  badgerDAO!: BadgerDAO
   uniswapCore!: UniswapCore
   uniswapPools!: UniswapPools
   balancerPools!: BalancerPools
@@ -171,7 +171,7 @@ export class BadgerSystem {
     await deployAragonInfrastructure(deployer)
     console.log('aragon infra')
     await deployGnosisSafeInfrastructure(deployer)
-    await deployBadgerDAO(deployer, {
+    const dao = await deployBadgerDAO(deployer, {
       tokenName: daoParams.tokenName,
       tokenSymbol: daoParams.tokenSymbol,
       id: daoParams.id,
@@ -181,18 +181,16 @@ export class BadgerSystem {
       votingSettings: [daoParams.supportRequired, daoParams.minAcceptanceQuorum, daoParams.voteDuration],
       useAgentAsVault: daoParams.useAgentAsVault
     })
-    console.log('dao')
-
 
     const badgerToken = await deployContract(deployer, ERC20PresetMinterPauser, ['Badger', 'BADGER'])
     const tx = await badgerToken.mint(deployerAddress, badgerParams.totalSupply)
     await tx.wait()
 
-    this.fakeDAO = {
+    this.badgerDAO = {
       daoAgent: deployerAddress,
       daoFinance: deployerAddress,
       proxyAdmin: deployerAddress,
-      badgerToken
+      badgerToken: dao.token
     }
 
     console.log('Deployed DAO')
@@ -373,7 +371,7 @@ export class BadgerSystem {
       deployer,
       uniswapCore: { uniswapV2Factory },
       diggCore: { diggToken },
-      fakeDAO: { badgerToken }
+      badgerDAO: { badgerToken }
     } = this
 
     let tx = await uniswapV2Factory.createPair(this.weth.address, badgerToken.address)
@@ -403,7 +401,7 @@ export class BadgerSystem {
     this.stakingAssets[PoolAssets.LP_UNI_DIGG] = this.uniswapPools.diggEthPool
 
     // Add BADGER to staking assets as well
-    this.stakingAssets[PoolAssets.BADGER] = this.fakeDAO.badgerToken
+    this.stakingAssets[PoolAssets.BADGER] = this.badgerDAO.badgerToken
   }
 
   async deployBalancerPools() {
@@ -473,7 +471,7 @@ export class BadgerSystem {
     const {
       diggCore: { diggToken: baseToken, supplyPolicy, orchestrator },
       diggOracles: { cpiMedianOracle, marketMedianOracle },
-      fakeDAO: { daoAgent }
+      badgerDAO: { daoAgent }
     } = this
     await baseToken.transferOwnership(daoAgent)
     await supplyPolicy.transferOwnership(daoAgent)
@@ -588,7 +586,7 @@ export class BadgerSystem {
       config,
       web3,
       deployer,
-      fakeDAO: { badgerToken },
+      badgerDAO: { badgerToken },
       diggCore: { diggToken }
     } = this
 
@@ -629,7 +627,7 @@ export class BadgerSystem {
       config,
       web3,
       deployer,
-      fakeDAO: { daoAgent, badgerToken },
+      badgerDAO: { daoAgent, badgerToken },
       diggCore: { diggToken }
     } = this
 

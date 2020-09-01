@@ -87,7 +87,7 @@ interface fDiggOraclesSnapshot {
   }
 }
 
-interface fFakeDAOSnapshot {
+interface fBadgerDAOSnapshot {
   daoAgent: string
   daoFinance: string
   proxyAdmin: string
@@ -159,7 +159,7 @@ interface fDaoTimelocksSnapshot {
 interface FormattedSnapshot {
   diggCore: fDiggCoreSnapshot
   diggOracles: fDiggOraclesSnapshot
-  fakeDAO: fFakeDAOSnapshot
+  badgerDAO: fBadgerDAOSnapshot
   uniswapPools: fUniswapPoolsSnapshot
   balancerPools: fBalancerPoolsSnapshot
   badgerDistributionPools: fBadgerDistributionPoolsSnapshot
@@ -225,7 +225,7 @@ export const formatSnapshot = (snapshot: BadgerSnapshot): FormattedSnapshot => {
   }
 
   const {
-    fakeDAO,
+    badgerDAO,
     uniswapPools,
     balancerPools,
     badgerDistributionPools,
@@ -234,17 +234,17 @@ export const formatSnapshot = (snapshot: BadgerSnapshot): FormattedSnapshot => {
     daoTimelocks
   } = snapshot
 
-  formatted.fakeDAO = {
-    daoAgent: fakeDAO.daoAgent,
-    daoFinance: fakeDAO.daoFinance,
-    proxyAdmin: fakeDAO.proxyAdmin,
+  formatted.badgerDAO= {
+    daoAgent: badgerDAO.daoAgent,
+    daoFinance: badgerDAO.daoFinance,
+    proxyAdmin: badgerDAO.proxyAdmin,
     badgerToken: {
-      totalSupply: formatEther(fakeDAO.badgerToken.totalSupply)
+      totalSupply: formatEther(badgerDAO.badgerToken.totalSupply)
     },
-    badgerInTimelock: formatEther(fakeDAO.badgerInTimelock),
-    badgerInAgent: formatEther(fakeDAO.badgerInAgent),
-    diggInTimelock: formatUnits(fakeDAO.diggInTimelock, 'gwei'),
-    diggInAgent: formatUnits(fakeDAO.diggInAgent, 'gwei')
+    badgerInTimelock: formatEther(badgerDAO.badgerInTimelock),
+    badgerInAgent: formatEther(badgerDAO.badgerInAgent),
+    diggInTimelock: formatUnits(badgerDAO.diggInTimelock, 'gwei'),
+    diggInAgent: formatUnits(badgerDAO.diggInAgent, 'gwei')
   }
 
   formatted.uniswapPools = {

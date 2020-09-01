@@ -36,7 +36,7 @@ export async function runIntegrationTests() {
   }
 
   console.log('verifyOwnershipPermissions')
-  await verifyOwnershipPermissions(badger, badger.fakeDAO.daoAgent, badActor)
+  await verifyOwnershipPermissions(badger, badger.badgerDAO.daoAgent, badActor)
 
   const stakingBeginsTime = badger.config.trancheStart.toNumber();
   console.log('stakingBeginsTime', stakingBeginsTime)
