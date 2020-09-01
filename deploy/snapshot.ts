@@ -52,6 +52,7 @@ export interface DiggCoreSnapshot {
     totalSupply: BigNumber
     owner: string
     monetaryPolicy: string
+    rebaseStartTime: BigNumber
   }
   supplyPolicy: {
     owner: string
@@ -137,11 +138,7 @@ export interface BalancerPoolsSnapshot {
   }
 }
 
-export interface BadgerDistributionPoolsSnapshot {
-  tranches: TrancheSnapshot[]
-}
-
-export interface DiggDistributionPoolsSnapshot {
+export interface DistributionPoolsSnapshot {
   tranches: TrancheSnapshot[]
 }
 
@@ -173,8 +170,8 @@ export interface BadgerSnapshot {
   fakeDAO: FakeDAOSnapshot
   uniswapPools: UniswapPoolsSnapshot
   balancerPools: BalancerPoolsSnapshot
-  badgerDistributionPools: BadgerDistributionPoolsSnapshot
-  diggDistributionPools: DiggDistributionPoolsSnapshot
+  badgerDistributionPools: DistributionPoolsSnapshot
+  diggDistributionPools: DistributionPoolsSnapshot
   stakingAssets: StakingAssetsSnapshot
   daoTimelocks: DaoTimelocksSnapshot
 
@@ -191,7 +188,8 @@ export const getSnapshot = async (badger: BadgerSystem): Promise<BadgerSnapshot>
     diggToken: {
       totalSupply: await diggToken.totalSupply(),
       owner: await diggToken.owner(),
-      monetaryPolicy: await diggToken.monetaryPolicy()
+      monetaryPolicy: await diggToken.monetaryPolicy(),
+      rebaseStartTime: await diggToken.rebaseStartTime()
     },
     supplyPolicy: {
       owner: await supplyPolicy.owner(),
@@ -297,7 +295,7 @@ export const getSnapshot = async (badger: BadgerSystem): Promise<BadgerSnapshot>
 
   const badgerDistributionPools = {
       tranches: [] as TrancheSnapshot[]
-  } as BadgerDistributionPoolsSnapshot
+  } as DistributionPoolsSnapshot
 
   for (const tranche of badger.badgerDistributionPools.tranches) {
     const trancheSnapshot = await getTrancheSnapshot(badger, tranche)
@@ -307,7 +305,7 @@ export const getSnapshot = async (badger: BadgerSystem): Promise<BadgerSnapshot>
 
   const diggDistributionPools = {
     tranches: [] as TrancheSnapshot[]
-} as DiggDistributionPoolsSnapshot
+} as DistributionPoolsSnapshot
 
   for (const tranche of badger.diggDistributionPools.tranches) {
     const trancheSnapshot = await getTrancheSnapshot(badger, tranche)

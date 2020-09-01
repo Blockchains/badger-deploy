@@ -11,13 +11,20 @@ import {
   TrancheConfig
 } from './badgerConfig'
 import * as _ from 'lodash'
-import { colors } from './deploy'
+import { ChainIds, colors } from './deploySystem'
 
 // OZ SDK
 import Web3 from 'web3'
 import { Contracts, ProxyAdminProject, ZWeb3 } from '@openzeppelin/upgrades'
 
-// Rebase Core
+// Badger DAO
+import BadgerDAOTemplate from '../dependency-artifacts/badger-dao/BadgerDAOTemplate.json'
+import MiniMeToken from '../dependency-artifacts/badger-dao/MiniMeToken.json'
+import Agent from '../dependency-artifacts/badger-dao/Agent.json'
+import Voting from '../dependency-artifacts/badger-dao/Voting.json'
+import Finance from '../dependency-artifacts/badger-dao/Finance.json'
+
+// Badger Core
 import UFragments from '../dependency-artifacts/digg-core/UFragments.json'
 import UFragmentsPolicy from '../dependency-artifacts/digg-core/UFragmentsPolicy.json'
 import Orchestrator from '../dependency-artifacts/digg-core/Orchestrator.json'
@@ -29,7 +36,6 @@ import GnosisSafe from '../dependency-artifacts/gnosis-safe/GnosisSafe.json'
 
 // Tokens
 import IERC20 from '../dependency-artifacts/rebase-oracle/IERC20.json'
-import ERC20Detailed from '../dependency-artifacts/uFragments/ERC20Detailed.json'
 import ERC20PresetMinterPauser from '../dependency-artifacts/openzeppelin-contracts/ERC20PresetMinterPauser.json'
 import WETH9 from '../dependency-artifacts/uniswap-v2-periphery/WETH9.json'
 import TokenTimelock from '../dependency-artifacts/openzeppelin-contracts/TokenTimelock.json'
@@ -43,8 +49,15 @@ import { deployUniswapSystem } from './uniswap/deploy'
 // Geyser
 import TokenGeyser from '../dependency-artifacts/badger-geyser/TokenGeyser.json'
 import { deployGnosisSafeInfrastructure, deployGnosisSafe } from './gnosis-safe/deploy'
-import { ChainIds } from './deploy'
 import { deployAndConfigBalancerPool } from './balancer/deploy'
+import { formatTime } from './test/helpers/time'
+import { getAllPools } from './test/helpers/poolHelpers'
+import { deployAragonInfrastructure, deployBadgerDAO } from './aragon/deploy'
+
+export enum PoolSet {
+  DIGG,
+  BADGER
+}
 
 export interface ContractMap {
   [index: string]: Contract
@@ -65,7 +78,7 @@ export interface Tranche {
   pools: Pool[]
 }
 
-const overrides = {
+export const overrides = {
   gasLimit: 9999999
 }
 
@@ -106,11 +119,7 @@ export interface BalancerPools {
   diggEthPool: Contract
 }
 
-export interface BadgerDistributionPools {
-  tranches: Tranche[]
-}
-
-export interface DiggDistributionPools {
+export interface DistributionPoolSet {
   tranches: Tranche[]
 }
 
@@ -131,8 +140,8 @@ export class BadgerSystem {
   uniswapPools!: UniswapPools
   balancerPools!: BalancerPools
   weth!: Contract
-  badgerDistributionPools!: BadgerDistributionPools
-  diggDistributionPools!: DiggDistributionPools
+  badgerDistributionPools!: DistributionPoolSet
+  diggDistributionPools!: DistributionPoolSet
   stakingAssets!: StakingAssets
   daoTimelocks!: DaoTimelocks
 
@@ -145,8 +154,8 @@ export class BadgerSystem {
     this.web3 = web3
     this.deployer = deployer
 
-    this.badgerDistributionPools = {} as BadgerDistributionPools
-    this.diggDistributionPools = {} as DiggDistributionPools
+    this.badgerDistributionPools = {} as DistributionPoolSet
+    this.diggDistributionPools = {} as DistributionPoolSet
     this.badgerDistributionPools.tranches = []
     this.diggDistributionPools.tranches = []
     this.stakingAssets = {} as StakingAssets
@@ -155,9 +164,25 @@ export class BadgerSystem {
   async deployDAO() {
     const {
       deployer,
-      config: { badgerParams }
+      config: { badgerParams, daoParams }
     } = this
     const deployerAddress = await this.deployer.getAddress()
+    
+    await deployAragonInfrastructure(deployer)
+    console.log('aragon infra')
+    await deployGnosisSafeInfrastructure(deployer)
+    await deployBadgerDAO(deployer, {
+      tokenName: daoParams.tokenName,
+      tokenSymbol: daoParams.tokenSymbol,
+      id: daoParams.id,
+      financePeriod: daoParams.financePeriod,
+      holders: [deployerAddress],
+      stakes:[daoParams.initialSupply],
+      votingSettings: [daoParams.supportRequired, daoParams.minAcceptanceQuorum, daoParams.voteDuration],
+      useAgentAsVault: daoParams.useAgentAsVault
+    })
+    console.log('dao')
+
 
     const badgerToken = await deployContract(deployer, ERC20PresetMinterPauser, ['Badger', 'BADGER'])
     const tx = await badgerToken.mint(deployerAddress, badgerParams.totalSupply)
@@ -174,13 +199,7 @@ export class BadgerSystem {
   }
 
   async deployCore() {
-    const {
-      externalContracts,
-      rebaseSystem,
-      diggParams: rebaseParams,
-      marketOracleParams,
-      cpiOracleParams
-    } = this.config
+    const { externalContracts, rebaseSystem, diggParams: diggParams, marketOracleParams, cpiOracleParams } = this.config
     const { deployer } = this
     const deployerAddress = await deployer.getAddress()
 
@@ -201,8 +220,8 @@ export class BadgerSystem {
     }
 
     console.log(`baseToken: ${this.diggCore.diggToken.address}`),
-      console.log(`baseTokenLogic: ${this.diggCore.diggTokenLogic.address}`),
-      console.log(`supplyPolicy: ${this.diggCore.supplyPolicy.address}`)
+    console.log(`baseTokenLogic: ${this.diggCore.diggTokenLogic.address}`),
+    console.log(`supplyPolicy: ${this.diggCore.supplyPolicy.address}`)
     console.log(`supplyPolicyLogic: ${this.diggCore.supplyPolicyLogic.address}`)
     console.log(`orchestrator: ${this.diggCore.orchestrator.address}`)
   }
@@ -231,7 +250,7 @@ export class BadgerSystem {
 
   async deployDiggOracles() {
     const {
-      config: { marketOracleParams, diggParams: rebaseParams, centralizedOracleParams, cpiOracleParams },
+      config: { marketOracleParams, diggParams: diggParams, centralizedOracleParams, cpiOracleParams },
       web3,
       deployer
     } = this
@@ -248,12 +267,8 @@ export class BadgerSystem {
       cpiOracleParams.minimumProviders
     ])
 
-    const constantOracle = await deployContract(deployer, ConstantOracle, [
-      rebaseParams.baseCpi,
-      cpiMedianOracle.address
-    ])
+    const constantOracle = await deployContract(deployer, ConstantOracle, [diggParams.baseCpi, cpiMedianOracle.address])
 
-    await deployGnosisSafeInfrastructure(deployer)
     let centralizedMarketOracle: Contract
 
     // Use deployer as centralized oracle owner if on local
@@ -287,8 +302,6 @@ export class BadgerSystem {
     tx = await marketMedianOracle.addProvider(centralizedMarketOracle.address)
     await tx.wait()
 
-    console.log(centralizedMarketOracle.functions)
-
     this.diggOracles = {
       marketMedianOracle,
       cpiMedianOracle,
@@ -307,13 +320,16 @@ export class BadgerSystem {
 
   async initializeCore() {
     const { config, deployer } = this
-    const { externalContracts, rebaseSystem, diggParams: rebaseParams, marketOracleParams, cpiOracleParams } = config
+    const { externalContracts, rebaseSystem, diggParams, trancheStart } = config
     const { diggToken: baseToken, supplyPolicy, orchestrator } = this.diggCore
     const { marketMedianOracle, cpiMedianOracle } = this.diggOracles
 
     const deployerAddress = await deployer.getAddress()
+    const rebasePossibleTime = trancheStart.add(diggParams.rebaseDelayAfterStakingStart)
 
-    let tx = await baseToken.functions['initialize(address)'](deployerAddress)
+    console.log(`Rebases Possible at: ${rebasePossibleTime} (${formatTime(rebasePossibleTime)})`)
+
+    let tx = await baseToken.functions['initialize(address,uint256)'](deployerAddress, rebasePossibleTime)
     await tx.wait()
 
     tx = await baseToken.setMonetaryPolicy(supplyPolicy.address)
@@ -324,7 +340,7 @@ export class BadgerSystem {
     tx = await supplyPolicy.functions['initialize(address,address,uint256)'](
       deployerAddress,
       baseToken.address,
-      rebaseParams.baseCpi
+      diggParams.baseCpi
     )
     await tx.wait()
 
@@ -336,19 +352,18 @@ export class BadgerSystem {
     tx = await supplyPolicy.setMarketOracle(marketMedianOracle.address)
     await tx.wait()
 
-    tx = await supplyPolicy.setDeviationThreshold(rebaseParams.deviationThreshold)
-    await tx.wait()
+    tx = await (await supplyPolicy.setDeviationThreshold(diggParams.deviationThreshold)).wait()
 
     tx = await supplyPolicy.setOrchestrator(orchestrator.address)
     await tx.wait()
 
-    tx = await supplyPolicy.setRebaseLag(rebaseParams.rebaseLag)
+    tx = await supplyPolicy.setRebaseLag(diggParams.rebaseLag)
     await tx.wait()
 
     tx = await supplyPolicy.setRebaseTimingParameters(
-      rebaseParams.minRebaseTimeIntervalSec,
-      rebaseParams.rebaseWindowOffsetSec,
-      rebaseParams.rebaseWindowLengthSec
+      diggParams.minRebaseTimeIntervalSec,
+      diggParams.rebaseWindowOffsetSec,
+      diggParams.rebaseWindowLengthSec
     )
     await tx.wait()
   }
@@ -554,7 +569,7 @@ export class BadgerSystem {
           Pool: ${poolContract.address}
           Asset: ${assetContract.address}
           Locked:  ${utils.formatUnits(poolAmount, tokenDisplayUnit)} tokens
-          Starts:  ${trancheStart}, for ${tranche.duration} seconds
+          Starts:  ${formatTime(trancheStart)}, for ${tranche.duration} seconds
          `
       )
 
@@ -662,5 +677,63 @@ export class BadgerSystem {
       Amount Locked: ${utils.formatUnits(config.tokenLockParams.badgerLockAmount, 'gwei')}
       Unlocks At   : ${this.getTimelockRelease()}
     `)
+  }
+
+  getDistributionPoolSet(poolSet: PoolSet) {
+    switch (poolSet) {
+      case PoolSet.DIGG:
+        return this.diggDistributionPools
+      case PoolSet.BADGER:
+        return this.badgerDistributionPools
+      default:
+        throw new Error(`Invalid pool set specified ${poolSet}`)
+    }
+  }
+
+  getPoolsByDistributedToken(poolSet: PoolSet) {
+    const distPools = this.getDistributionPoolSet(poolSet)
+
+    const pools = [] as Pool[]
+
+    for (const tranche of distPools.tranches) {
+      for (const pool of tranche.pools) {
+        pools.push(pool)
+      }
+    }
+    return pools
+  }
+
+  getStakingContractByAddress(stakingAddress: string): Contract | undefined {
+    const assetKey = Object.keys(this.stakingAssets).find(key => {
+      return this.stakingAssets[key].address === stakingAddress
+    })
+    if (assetKey) {
+      return this.stakingAssets[assetKey]
+    } else {
+      return undefined
+    }
+  }
+
+  getPoolContractByAddress(poolAddress: string): Contract | undefined {
+    const pools = getAllPools(this)
+    const foundPool = pools.find(pool => pool.contract.address === poolAddress)
+    return foundPool ? foundPool.contract : undefined
+  }
+
+  getPoolsByTranche(poolSet: PoolSet, trancheId: number) {
+    const distPools = this.getDistributionPoolSet(poolSet)
+    const tranche = distPools.tranches[trancheId]
+
+    if (!tranche) {
+      throw new Error(`Invalid tranche ID specified ${trancheId}`)
+    }
+
+    const pools = [] as Pool[]
+
+    for (const pool of tranche.pools) {
+      pools.push(pool)
+    }
+
+    return pools
   }
 }

@@ -5,17 +5,21 @@
   "scripts": {
     "lint": "npx prettier ./deploy/*.ts --check",
     "lint:fix": "npx prettier ./deploy/*.ts --write",
+    "test": "npx buidler run deploy/test/integrationTests.ts --show-stack-traces --no-compile --network buidlerevm",
     "deploy-local": "npx buidler run deploy/deploy.ts --show-stack-traces --no-compile --network buidlerevm",
     "deploy-rinkeby": "npx buidler run deploy/deploy.ts --show-stack-traces --no-compile --network rinkeby",
     "deploy-mainnet": "npx buidler run deploy/deploy.ts --show-stack-traces --no-compile --network mainnet"
   },
   "dependencies": {
     "@aragon/cli": "^7.1.6",
+    "@aragon/templates-shared": "^1.0.1",
     "@openzeppelin/cli": "^2.8.2",
     "@openzeppelin/contracts": "^3.1.0",
     "@types/lodash": "^4.14.159",
+    "buidler-gas-reporter": "^0.1.3",
     "colors": "^1.4.0",
     "dotenv": "^8.2.0",
+    "eth-ens-namehash": "^2.0.8",
     "flat": "^5.0.2",
     "lodash": "^4.17.19",
     "openzeppelin-eth": "^2.0.2",

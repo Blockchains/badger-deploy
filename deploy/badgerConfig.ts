@@ -1,6 +1,7 @@
 import { BigNumber, utils } from 'ethers'
 import _ from 'lodash'
 import { addListener } from 'process'
+import { getCurrentTimestamp } from './test/helpers/time'
 
 const ONE = BigNumber.from(1)
 const TWO = BigNumber.from(2)
@@ -192,6 +193,17 @@ export interface SystemConfig {
     proxyAdmin: string
     rebaseBtcBaseOracle: string
   }
+  daoParams: {
+    tokenName: string
+    tokenSymbol: string
+    id: string
+    initialSupply: BigNumber
+    financePeriod: BigNumber
+    useAgentAsVault: boolean
+    supportRequired: BigNumber
+    minAcceptanceQuorum: BigNumber
+    voteDuration: BigNumber
+  }
   badgerParams: {
     totalSupply: BigNumber
   }
@@ -208,6 +220,7 @@ export interface SystemConfig {
     rebaseWindowOffsetSec: BigNumber
     rebaseWindowLengthSec: BigNumber
     baseCpi: BigNumber
+    rebaseDelayAfterStakingStart: BigNumber
   }
   marketOracleParams: {
     reportExpirationTimeSec: BigNumber
@@ -262,6 +275,17 @@ const RINKEBY: SystemConfig = {
   badgerParams: {
     totalSupply: utils.parseUnits('21000000', 'ether')
   },
+  daoParams: {
+    tokenName: "Badger",
+    tokenSymbol: "BADGER",
+    id: "badger-finance",
+    initialSupply: utils.parseEther("21000000"),
+    financePeriod: BigNumber.from(0),
+    useAgentAsVault: true,
+    supportRequired: utils.parseEther("0.5"),
+    minAcceptanceQuorum: utils.parseEther("0.05"),
+    voteDuration: daysToSeconds(7)
+  },
   diggParams: {
     initialSupply: BigNumber.from(6250)
       .mul(10 ** 9),
@@ -270,7 +294,8 @@ const RINKEBY: SystemConfig = {
     minRebaseTimeIntervalSec: BigNumber.from(86400),
     rebaseWindowOffsetSec: BigNumber.from(7200),
     rebaseWindowLengthSec: BigNumber.from(1200),
-    baseCpi: BigNumber.from(10).pow(18)
+    baseCpi: BigNumber.from(10).pow(18),
+    rebaseDelayAfterStakingStart: daysToSeconds(30)
   },
   marketOracleParams: {
     reportExpirationTimeSec: BigNumber.from(88200),
@@ -298,7 +323,7 @@ const RINKEBY: SystemConfig = {
       }
     ]
   },
-  trancheStart: BigNumber.from('1598305710'),
+  trancheStart: BigNumber.from(getCurrentTimestamp() + daysToSeconds(1).toNumber()),
   badgerTranches: [
     {
       // Tranche 1
@@ -421,7 +446,7 @@ const RINKEBY: SystemConfig = {
     {
       // Tranche 1
       id: '1',
-      startTimeOffset: BigNumber.from(21),
+      startTimeOffset: daysToSeconds(21),
       duration: daysToSeconds(3),
       totalAmount: utils.parseUnits('810', 'gwei'),
       pools: [

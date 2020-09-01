@@ -17,65 +17,62 @@ export const compareSnapshotToDeploy = (badgerSystem: BadgerSystem, snapshot: Ba
 const compareDiggCore = (badgerSystem: BadgerSystem, snapshot: BadgerSnapshot, config: SystemConfig) => {
   const daoAgent = badgerSystem.fakeDAO.daoAgent
 
-  expect(snapshot.diggCore.diggToken.totalSupply).to.be.equal(config.diggParams.initialSupply)
-  expect(snapshot.diggCore.diggToken.monetaryPolicy).to.be.equal(badgerSystem.diggCore.supplyPolicy.address)
-  expect(snapshot.diggCore.diggToken.owner).to.be.equal(daoAgent)
+  expect(snapshot.diggCore.diggToken.totalSupply, 'diggToken.totalSupply').to.be.equal(config.diggParams.initialSupply)
+  expect(snapshot.diggCore.diggToken.monetaryPolicy, 'diggToken.monetaryPolicy').to.be.equal(badgerSystem.diggCore.supplyPolicy.address)
+  expect(snapshot.diggCore.diggToken.owner, 'diggToken.owner').to.be.equal(daoAgent)
 
-  expect(snapshot.diggCore.supplyPolicy.owner).to.be.equal(daoAgent)
-  expect(snapshot.diggCore.supplyPolicy.uFrags).to.be.equal(badgerSystem.diggCore.diggToken.address)
-  expect(snapshot.diggCore.supplyPolicy.orchestrator).to.be.equal(badgerSystem.diggCore.orchestrator.address)
-  expect(snapshot.diggCore.supplyPolicy.deviationThreshold).to.be.equal(config.diggParams.deviationThreshold)
+  expect(snapshot.diggCore.supplyPolicy.owner, 'supplyPolicy.owner').to.be.equal(daoAgent)
+  expect(snapshot.diggCore.supplyPolicy.uFrags, 'supplyPolicy.uFrags').to.be.equal(badgerSystem.diggCore.diggToken.address)
+  expect(snapshot.diggCore.supplyPolicy.orchestrator, 'supplyPolicy.orchestrator').to.be.equal(badgerSystem.diggCore.orchestrator.address)
+  expect(snapshot.diggCore.supplyPolicy.deviationThreshold, 'supplyPolicy.deviationThreshold').to.be.equal(config.diggParams.deviationThreshold)
   // expect(snapshot.diggCore.supplyPolicy.epoch).to.be.equal(config.diggParams.epoch)
-  expect(snapshot.diggCore.supplyPolicy.minRebaseTimeIntervalSec).to.be.equal(
+  expect(snapshot.diggCore.supplyPolicy.minRebaseTimeIntervalSec, 'supplyPolicy.minRebaseTimeIntervalSec').to.be.equal(
     config.diggParams.minRebaseTimeIntervalSec
   )
-  expect(snapshot.diggCore.supplyPolicy.rebaseLag).to.be.equal(config.diggParams.rebaseLag)
-  expect(snapshot.diggCore.supplyPolicy.rebaseWindowLengthSec).to.be.equal(config.diggParams.rebaseWindowLengthSec)
-  expect(snapshot.diggCore.supplyPolicy.rebaseWindowOffsetSec).to.be.equal(config.diggParams.rebaseWindowOffsetSec)
+  expect(snapshot.diggCore.supplyPolicy.rebaseLag, 'supplyPolicy.rebaseLag').to.be.equal(config.diggParams.rebaseLag)
+  expect(snapshot.diggCore.supplyPolicy.rebaseWindowLengthSec, 'supplyPolicy.rebaseWindowLengthSec').to.be.equal(config.diggParams.rebaseWindowLengthSec)
+  expect(snapshot.diggCore.supplyPolicy.rebaseWindowOffsetSec, 'supplyPolicy.rebaseWindowOffsetSec').to.be.equal(config.diggParams.rebaseWindowOffsetSec)
 
-  expect(snapshot.diggCore.orchestrator.owner).to.be.equal(daoAgent)
-  expect(snapshot.diggCore.orchestrator.policy).to.be.equal(badgerSystem.diggCore.supplyPolicy.address)
-  expect(snapshot.diggCore.orchestrator.transactions).to.deep.equal([] as string[])
+  expect(snapshot.diggCore.orchestrator.owner, 'orchestrator.owner').to.be.equal(daoAgent)
+  expect(snapshot.diggCore.orchestrator.policy, 'orchestrator.policy').to.be.equal(badgerSystem.diggCore.supplyPolicy.address)
+  expect(snapshot.diggCore.orchestrator.transactions, 'orchestrator.transactions').to.deep.equal([] as string[])
 }
 
 const compareDiggOracles = (badgerSystem: BadgerSystem, snapshot: BadgerSnapshot, config: SystemConfig) => {
   const daoAgent = badgerSystem.fakeDAO.daoAgent
 
-  expect(snapshot.diggOracles.marketMedianOracle.owner).to.be.equal(daoAgent)
-  console.log(8)
-
-  expect(snapshot.diggOracles.marketMedianOracle.providers).to.deep.equal([
+  expect(snapshot.diggOracles.marketMedianOracle.owner, 'marketMedianOracle.owner').to.be.equal(daoAgent)
+  expect(snapshot.diggOracles.marketMedianOracle.providers, 'marketMedianOracle.providers').to.deep.equal([
     badgerSystem.diggOracles.centralizedMarketOracle.address
   ])
-  expect(snapshot.diggOracles.marketMedianOracle.minimumProviders).to.be.equal(
+  expect(snapshot.diggOracles.marketMedianOracle.minimumProviders, 'marketMedianOracle.minimumProviders').to.be.equal(
     config.marketOracleParams.minimumProviders
   )
-  expect(snapshot.diggOracles.marketMedianOracle.reportDelaySec).to.be.equal(config.marketOracleParams.reportDelaySec)
-  expect(snapshot.diggOracles.marketMedianOracle.reportExpirationTimeSec).to.be.equal(
+  expect(snapshot.diggOracles.marketMedianOracle.reportDelaySec, 'marketMedianOracle.reportDelaySec').to.be.equal(config.marketOracleParams.reportDelaySec)
+  expect(snapshot.diggOracles.marketMedianOracle.reportExpirationTimeSec, 'marketMedianOracle.reportExpirationTimeSec').to.be.equal(
     config.marketOracleParams.reportExpirationTimeSec
   )
-  expect(snapshot.diggOracles.marketMedianOracle.providersSize).to.be.equal(
+  expect(snapshot.diggOracles.marketMedianOracle.providersSize, 'marketMedianOracle.providersSize').to.be.equal(
     BigNumber.from(1)
   )
 
-  expect(snapshot.diggOracles.cpiMedianOracle.owner).to.be.equal(daoAgent)
-  expect(snapshot.diggOracles.cpiMedianOracle.providers).to.deep.equal([badgerSystem.diggOracles.constantOracle.address])
-  expect(snapshot.diggOracles.cpiMedianOracle.minimumProviders).to.be.equal(config.cpiOracleParams.minimumProviders)
-  expect(snapshot.diggOracles.cpiMedianOracle.reportDelaySec).to.be.equal(config.cpiOracleParams.reportDelaySec)
-  expect(snapshot.diggOracles.cpiMedianOracle.reportExpirationTimeSec).to.be.equal(
+  expect(snapshot.diggOracles.cpiMedianOracle.owner, 'cpiMedianOracle.owner').to.be.equal(daoAgent)
+  expect(snapshot.diggOracles.cpiMedianOracle.providers, 'cpiMedianOracle.providers').to.deep.equal([badgerSystem.diggOracles.constantOracle.address])
+  expect(snapshot.diggOracles.cpiMedianOracle.minimumProviders, 'cpiMedianOracle.minimumProviders').to.be.equal(config.cpiOracleParams.minimumProviders)
+  expect(snapshot.diggOracles.cpiMedianOracle.reportDelaySec, 'cpiMedianOracle.reportDelaySec').to.be.equal(config.cpiOracleParams.reportDelaySec)
+  expect(snapshot.diggOracles.cpiMedianOracle.reportExpirationTimeSec, 'cpiMedianOracle.reportExpirationTimeSec').to.be.equal(
     config.cpiOracleParams.reportExpirationTimeSec
   )
-  expect(snapshot.diggOracles.cpiMedianOracle.providersSize).to.be.equal(
+  expect(snapshot.diggOracles.cpiMedianOracle.providersSize, 'cpiMedianOracle.providersSize').to.be.equal(
     BigNumber.from(1)
   )
 
-  console.log(9)
 
-  expect(snapshot.diggOracles.centralizedMarketOracle.owners).to.deep.equal([daoAgent])
-  expect(snapshot.diggOracles.centralizedMarketOracle.threshold).to.be.equal(BigNumber.from(1))
+  expect(snapshot.diggOracles.centralizedMarketOracle.owners, 'centralizedMarketOracle.owners').to.deep.equal([daoAgent])
+  expect(snapshot.diggOracles.centralizedMarketOracle.threshold, 'centralizedMarketOracle.threshold').to.be.equal(BigNumber.from(1))
 
-  expect(snapshot.diggOracles.constantOracle.value).to.be.equal(ethers.utils.parseEther('1'))
-  expect(snapshot.diggOracles.constantOracle.medianOracle).to.be.equal(
+  expect(snapshot.diggOracles.constantOracle.value, 'constantOracle.value').to.be.equal(ethers.utils.parseEther('1'))
+  expect(snapshot.diggOracles.constantOracle.medianOracle, 'constantOracle.medianOracle').to.be.equal(
     badgerSystem.diggOracles.cpiMedianOracle.address
   )
 }
