@@ -18,6 +18,12 @@ export const APPS = [
   { name: 'token-manager', contractName: 'TokenManager', artifact: TokenManager }
 ]
 
+export const APP_IDS_TO_NAME = APPS.reduce((ids, { name }) => {
+  // @ts-ignore
+  ids[namehash(`${name}.aragonpm.eth`)] = name
+  return ids
+}, {})
+
 export const APP_IDS = APPS.reduce((ids, { name }) => {
   // @ts-ignore
   ids[name] = namehash(`${name}.aragonpm.eth`)

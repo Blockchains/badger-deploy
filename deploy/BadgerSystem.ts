@@ -12,6 +12,8 @@ import {
 } from './badgerConfig'
 import * as _ from 'lodash'
 import { ChainIds, colors } from './deploySystem'
+import {FormattedSnapshot, fTrancheSnapshot} from './io/writeSnapshot'
+const fs = require('fs');
 
 // OZ SDK
 import Web3 from 'web3'
@@ -23,6 +25,8 @@ import MiniMeToken from '../dependency-artifacts/badger-dao/MiniMeToken.json'
 import Agent from '../dependency-artifacts/badger-dao/Agent.json'
 import Voting from '../dependency-artifacts/badger-dao/Voting.json'
 import Finance from '../dependency-artifacts/badger-dao/Finance.json'
+import Kernel from '../dependency-artifacts/badger-dao/Kernel.json'
+import TokenManager from '../dependency-artifacts/badger-dao/TokenManager.json'
 
 // Badger Core
 import UFragments from '../dependency-artifacts/digg-core/UFragments.json'
@@ -39,11 +43,14 @@ import IERC20 from '../dependency-artifacts/rebase-oracle/IERC20.json'
 import ERC20PresetMinterPauser from '../dependency-artifacts/openzeppelin-contracts/ERC20PresetMinterPauser.json'
 import WETH9 from '../dependency-artifacts/uniswap-v2-periphery/WETH9.json'
 import TokenTimelock from '../dependency-artifacts/openzeppelin-contracts/TokenTimelock.json'
+import ProxyAdmin from '../dependency-artifacts/openzeppelin-upgrades/ProxyAdmin.json'
+import AdminUpgradeabilityProxy from '../dependency-artifacts/openzeppelin-upgrades/AdminUpgradeabilityProxy.json'
 
 // Liquidity
 import UniswapV2Pair from '../dependency-artifacts/uniswap-v2-core/UniswapV2Pair.json'
 import UniswapV2Factory from '../dependency-artifacts/uniswap-v2-core/UniswapV2Factory.json'
 import UniswapV2Router02 from '../dependency-artifacts/uniswap-v2-periphery/UniswapV2Router02.json'
+import BPool from '../dependency-artifacts/balancer-core/BPool.json'
 import { deployUniswapSystem } from './uniswap/deploy'
 
 // Geyser
@@ -100,8 +107,13 @@ export interface DiggOracles {
 export interface BadgerDAO {
   daoAgent: string
   daoFinance: string
-  proxyAdmin: string
+  proxyAdmin: Contract
+  kernel: Contract
   badgerToken: Contract
+  agent: Contract
+  finance: Contract
+  voting: Contract
+  tokenManager: Contract
 }
 
 export interface UniswapCore {
@@ -129,7 +141,7 @@ export interface StakingAssets {
 
 export interface DaoTimelocks {
   badgerTimelock: Contract
-  diggTimeLock: Contract
+  diggTimelock: Contract
 }
 
 export class BadgerSystem {
@@ -148,6 +160,7 @@ export class BadgerSystem {
   config: SystemConfig
   web3: Web3
   deployer: Signer
+  deployerAddress!: string
 
   constructor(config: SystemConfig, web3: Web3, deployer: Signer) {
     this.config = config
@@ -159,6 +172,9 @@ export class BadgerSystem {
     this.badgerDistributionPools.tranches = []
     this.diggDistributionPools.tranches = []
     this.stakingAssets = {} as StakingAssets
+    this.deployer.getAddress().then(address => {
+      this.deployerAddress = address
+    })
   }
 
   async deployDAO() {
@@ -167,7 +183,6 @@ export class BadgerSystem {
       config: { badgerParams, daoParams }
     } = this
     const deployerAddress = await this.deployer.getAddress()
-    
     await deployAragonInfrastructure(deployer)
     console.log('aragon infra')
     await deployGnosisSafeInfrastructure(deployer)
@@ -186,10 +201,17 @@ export class BadgerSystem {
     const tx = await badgerToken.mint(deployerAddress, badgerParams.totalSupply)
     await tx.wait()
 
+    const proxyAdmin = await deployContract(deployer, ProxyAdmin)
+
     this.badgerDAO = {
-      daoAgent: deployerAddress,
-      daoFinance: deployerAddress,
-      proxyAdmin: deployerAddress,
+      daoAgent: dao.agent.address,
+      daoFinance: dao.finance.address,
+      proxyAdmin,
+      kernel: dao.dao,
+      agent: dao.agent,
+      finance: dao.finance,
+      voting: dao.voting,
+      tokenManager: dao.tokenManager,
       badgerToken: dao.token
     }
 
@@ -198,27 +220,28 @@ export class BadgerSystem {
 
   async deployCore() {
     const { externalContracts, rebaseSystem, diggParams: diggParams, marketOracleParams, cpiOracleParams } = this.config
-    const { deployer } = this
+    const { deployer, badgerDAO: {proxyAdmin} } = this
     const deployerAddress = await deployer.getAddress()
 
-    // ZWeb3.initialize(this.web3.currentProvider)
+    // Proxies are NOT initialized on constructor
+    const diggTokenLogic = await deployContract(deployer, UFragments)
+    const diggToken = await deployContract(deployer, AdminUpgradeabilityProxy, [diggTokenLogic.address, proxyAdmin.address, '0x'])
 
-    const baseToken = await deployContract(deployer, UFragments)
-    const baseTokenLogic = baseToken
-    const supplyPolicy = await deployContract(deployer, UFragmentsPolicy)
-    const supplyPolicyLogic = supplyPolicy
+    const supplyPolicyLogic = await deployContract(deployer, UFragmentsPolicy)
+    const supplyPolicy = await deployContract(deployer, AdminUpgradeabilityProxy, [supplyPolicyLogic.address, proxyAdmin.address, '0x'])
+
     const orchestrator = await deployContract(deployer, Orchestrator, [supplyPolicy.address])
 
     this.diggCore = {
-      diggToken: baseToken,
-      diggTokenLogic: baseTokenLogic,
-      supplyPolicy,
+      diggToken: new Contract(diggToken.address, UFragments.abi, deployer),
+      diggTokenLogic,
+      supplyPolicy: new Contract(supplyPolicy.address, UFragmentsPolicy.abi, deployer),
       supplyPolicyLogic,
       orchestrator
     }
 
-    console.log(`baseToken: ${this.diggCore.diggToken.address}`),
-    console.log(`baseTokenLogic: ${this.diggCore.diggTokenLogic.address}`),
+    console.log(`diggToken: ${this.diggCore.diggToken.address}`),
+    console.log(`diggTokenLogic: ${this.diggCore.diggTokenLogic.address}`),
     console.log(`supplyPolicy: ${this.diggCore.supplyPolicy.address}`)
     console.log(`supplyPolicyLogic: ${this.diggCore.supplyPolicyLogic.address}`)
     console.log(`orchestrator: ${this.diggCore.orchestrator.address}`)
@@ -319,7 +342,7 @@ export class BadgerSystem {
   async initializeCore() {
     const { config, deployer } = this
     const { externalContracts, rebaseSystem, diggParams, trancheStart } = config
-    const { diggToken: baseToken, supplyPolicy, orchestrator } = this.diggCore
+    const { diggToken: diggToken, supplyPolicy, orchestrator } = this.diggCore
     const { marketMedianOracle, cpiMedianOracle } = this.diggOracles
 
     const deployerAddress = await deployer.getAddress()
@@ -327,17 +350,17 @@ export class BadgerSystem {
 
     console.log(`Rebases Possible at: ${rebasePossibleTime} (${formatTime(rebasePossibleTime)})`)
 
-    let tx = await baseToken.functions['initialize(address,uint256)'](deployerAddress, rebasePossibleTime)
+    let tx = await diggToken.functions['initialize(address,uint256)'](deployerAddress, rebasePossibleTime)
     await tx.wait()
 
-    tx = await baseToken.setMonetaryPolicy(supplyPolicy.address)
+    tx = await diggToken.setMonetaryPolicy(supplyPolicy.address)
     await tx.wait()
 
     console.log('Configured base token ✔️')
 
     tx = await supplyPolicy.functions['initialize(address,address,uint256)'](
       deployerAddress,
-      baseToken.address,
+      diggToken.address,
       diggParams.baseCpi
     )
     await tx.wait()
@@ -421,63 +444,18 @@ export class BadgerSystem {
     this.stakingAssets[PoolAssets.LP_BAL_BADGER] = this.uniswapPools.badgerEthPool
   }
 
-  // async connectToSystem(deployment: RebaseDeployment, deployer: Signer) {
-  //   const { rebaseSystem, externalContracts } = deployment
-  //   // Rebase Core
-  //   if (rebaseSystem.baseToken) this.baseToken = new Contract(rebaseSystem.baseToken, UFragments.abi, deployer)
-  //   if (rebaseSystem.baseTokenLogic)
-  //     this.baseTokenLogic = new Contract(rebaseSystem.baseTokenLogic, UFragments.abi, deployer)
-  //   if (rebaseSystem.supplyPolicy)
-  //     this.supplyPolicy = new Contract(rebaseSystem.supplyPolicy, UFragmentsPolicy.abi, deployer)
-  //   if (rebaseSystem.supplyPolicyLogic)
-  //     this.supplyPolicyLogic = new Contract(rebaseSystem.supplyPolicyLogic, UFragmentsPolicy.abi, deployer)
-  //   if (rebaseSystem.orchestrator)
-  //     this.orchestrator = new Contract(rebaseSystem.orchestrator, Orchestrator.abi, deployer)
-
-  //   // Admin
-  //   if (rebaseSystem.daoAgent) this.daoAgent = rebaseSystem.daoAgent
-  //   if (rebaseSystem.daoFinance) this.daoFinance = rebaseSystem.daoFinance
-  //   if (rebaseSystem.proxyAdmin) this.proxyAdmin = rebaseSystem.proxyAdmin
-
-  //   // Oracles
-  //   if (rebaseSystem.marketMedianOracle)
-  //     this.marketMedianOracle = new Contract(rebaseSystem.marketMedianOracle, MedianOracle.abi, deployer)
-  //   if (rebaseSystem.cpiMedianOracle)
-  //     this.cpiMedianOracle = new Contract(rebaseSystem.cpiMedianOracle, MedianOracle.abi, deployer)
-  //   if (rebaseSystem.constantOracle)
-  //     this.constantOracle = new Contract(rebaseSystem.constantOracle, ConstantOracle.abi, deployer)
-  //   this.rebaseBtcBaseOracle = new Contract(rebaseSystem.rebaseBtcBaseOracle, ConstantOracle.abi, deployer)
-  //   // Uniswap
-  //   if (externalContracts.uniswapPool)
-  //     this.uniswapPool = new Contract(externalContracts.uniswapPool, UniswapV2Pair.abi, deployer)
-  //   if (externalContracts.uniswapV2Router)
-  //     this.uniswapV2Router = new Contract(externalContracts.uniswapV2Router, UniswapV2Router02.abi, deployer)
-  //   if (externalContracts.uniswapV2Factory)
-  //     this.uniswapV2Factory = new Contract(externalContracts.uniswapV2Factory, UniswapV2Factory.abi, deployer)
-
-  //   // External Tokens
-  //   if (externalContracts.weth) this.weth = new Contract(externalContracts.weth, WETH9.abi, deployer)
-
-  //   // Geyser
-  //   if (externalContracts.stakingTokenAddress) this.stakingTokenAddress = externalContracts.stakingTokenAddress
-  //   if (rebaseSystem.daoGovernanceToken) this.daoGovernanceToken = rebaseSystem.daoGovernanceToken
-  //   if (rebaseSystem.tokenGeyser) this.tokenGeyser = new Contract(rebaseSystem.tokenGeyser, TokenGeyser.abi, deployer)
-
-  //   this.deployed = true
-  // }
-
   // Transfer tokens + ownership of all contracts to system owner
   async transferToDao() {
     const {
-      diggCore: { diggToken: baseToken, supplyPolicy, orchestrator },
+      diggCore: { diggToken: diggToken, supplyPolicy, orchestrator },
       diggOracles: { cpiMedianOracle, marketMedianOracle },
       badgerDAO: { daoAgent }
     } = this
-    await baseToken.transferOwnership(daoAgent)
-    await supplyPolicy.transferOwnership(daoAgent)
-    await orchestrator.transferOwnership(daoAgent)
-    await cpiMedianOracle.transferOwnership(daoAgent)
-    await marketMedianOracle.transferOwnership(daoAgent)
+    await (await diggToken.transferOwnership(daoAgent)).wait()
+    await (await supplyPolicy.transferOwnership(daoAgent)).wait()
+    await (await orchestrator.transferOwnership(daoAgent)).wait()
+    await (await cpiMedianOracle.transferOwnership(daoAgent)).wait()
+    await (await marketMedianOracle.transferOwnership(daoAgent)).wait()
   }
 
   async connectOrDeployStakingAssets() {
@@ -644,34 +622,27 @@ export class BadgerSystem {
     ])
 
     // TODO: Convert DAOAgent to Contract when actual DAO
-    const diggTimeLock = await deployContract(deployer, TokenTimelock, [
+    const diggTimelock = await deployContract(deployer, TokenTimelock, [
       diggToken.address,
       daoAgent,
       this.getTimelockRelease()
     ])
 
-    let tx = await badgerToken.approve(badgerTimelock.address, ethers.constants.MaxUint256)
-    await tx.wait()
-
-    tx = await badgerToken.transfer(badgerTimelock.address, config.tokenLockParams.badgerLockAmount)
-    await tx.wait()
-
-    tx = await diggToken.approve(diggTimeLock.address, ethers.constants.MaxUint256)
-    await tx.wait()
-
-    tx = await diggToken.transfer(diggTimeLock.address, config.tokenLockParams.diggLockAmount)
-    await tx.wait()
+    await (await badgerToken.approve(badgerTimelock.address, ethers.constants.MaxUint256)).wait()
+    await (await badgerToken.transfer(badgerTimelock.address, config.tokenLockParams.badgerLockAmount)).wait()
+    await (await diggToken.approve(diggTimelock.address, ethers.constants.MaxUint256)).wait()
+    await (await diggToken.transfer(diggTimelock.address, config.tokenLockParams.diggLockAmount)).wait()
 
     this.daoTimelocks = {
       badgerTimelock,
-      diggTimeLock
+      diggTimelock
     }
 
     console.log(`Deployed Badger Timelock to ${this.daoTimelocks.badgerTimelock.address})
       Amount Locked: ${utils.formatEther(config.tokenLockParams.badgerLockAmount)}
       Unlocks At   : ${this.getTimelockRelease()}
     `)
-    console.log(`Deployed Digg Timelock to ${this.daoTimelocks.diggTimeLock.address}
+    console.log(`Deployed Digg Timelock to ${this.daoTimelocks.diggTimelock.address}
       Amount Locked: ${utils.formatUnits(config.tokenLockParams.badgerLockAmount, 'gwei')}
       Unlocks At   : ${this.getTimelockRelease()}
     `)

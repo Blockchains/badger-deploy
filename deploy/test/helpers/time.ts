@@ -1,7 +1,9 @@
 import { BigNumber } from "ethers"
 
 export async function setNextBlockTimestamp(provider: any, timestamp: number) {
-    await provider.send('evm_setNextBlockTimestamp', [BigNumber.from(timestamp)])
+    console.log('evm_setNextBlockTimestamp', timestamp)
+    await provider.send('evm_setNextBlockTimestamp', [BigNumber.from(timestamp).toHexString()])
+    console.log('evm_setNextBlockTimestamp', timestamp)
   }
 
 export function getCurrentTimestamp(): number {

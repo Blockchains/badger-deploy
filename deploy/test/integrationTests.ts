@@ -13,7 +13,6 @@ export async function runIntegrationTests() {
   const jsonRpcProvider = ethers.provider;
 
   const { badger, deploySnapshot, config } = await deploySystem()
-  console.log('yes')
 
   const [
     deployer,
@@ -46,7 +45,6 @@ export async function runIntegrationTests() {
 
   const rebasePossibleTime = deploySnapshot.diggCore.diggToken.rebaseStartTime.toNumber()
   console.log('rebasePossibleTime', rebasePossibleTime)
-
 
   await setNextBlockTimestamp(jsonRpcProvider, stakingBeginsTime)
   await supplyAssetsToStakers(badger, [

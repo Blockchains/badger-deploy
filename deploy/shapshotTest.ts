@@ -68,7 +68,7 @@ const compareDiggOracles = (badgerSystem: BadgerSystem, snapshot: BadgerSnapshot
   )
 
 
-  expect(snapshot.diggOracles.centralizedMarketOracle.owners, 'centralizedMarketOracle.owners').to.deep.equal([daoAgent])
+  expect(snapshot.diggOracles.centralizedMarketOracle.owners, 'centralizedMarketOracle.owners').to.deep.equal([badgerSystem.deployerAddress])
   expect(snapshot.diggOracles.centralizedMarketOracle.threshold, 'centralizedMarketOracle.threshold').to.be.equal(BigNumber.from(1))
 
   expect(snapshot.diggOracles.constantOracle.value, 'constantOracle.value').to.be.equal(ethers.utils.parseEther('1'))
@@ -125,10 +125,10 @@ const compareDaoTimelocks = (badgerSystem: BadgerSystem, snapshot: BadgerSnapsho
   )
   expect(snapshot.daoTimelocks.badgerTimelock.token).to.be.equal(badgerSystem.badgerDAO.badgerToken.address)
 
-  expect(snapshot.daoTimelocks.diggTimeLock.beneficiary).to.be.equal(daoAgent)
-  expect(snapshot.daoTimelocks.diggTimeLock.locked).to.be.equal(config.tokenLockParams.diggLockAmount)
-  expect(snapshot.daoTimelocks.diggTimeLock.releaseTime).to.be.equal(
+  expect(snapshot.daoTimelocks.diggTimelock.beneficiary).to.be.equal(daoAgent)
+  expect(snapshot.daoTimelocks.diggTimelock.locked).to.be.equal(config.tokenLockParams.diggLockAmount)
+  expect(snapshot.daoTimelocks.diggTimelock.releaseTime).to.be.equal(
     config.trancheStart.add(config.tokenLockParams.lockDuration)
   )
-  expect(snapshot.daoTimelocks.diggTimeLock.token).to.be.equal(badgerSystem.diggCore.diggToken.address)
+  expect(snapshot.daoTimelocks.diggTimelock.token).to.be.equal(badgerSystem.diggCore.diggToken.address)
 }

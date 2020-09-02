@@ -1,10 +1,16 @@
 import { utils, ethers } from 'ethers'
-import { BadgerSnapshot, TrancheSnapshot } from './snapshot'
+import { BadgerSnapshot, TrancheSnapshot } from '../snapshot'
 import _ from 'lodash'
+const fs = require('fs')
 
 const { formatEther, formatUnits } = utils
 
-interface fUnlockScheduleSnapshot {
+export interface fWethSnapshot {
+  address: string
+  totalSupply: string
+}
+
+export interface fUnlockScheduleSnapshot {
   initialLockedShares: string
   unlockedShares: string
   lastUnlockTimestampSec: string
@@ -13,8 +19,9 @@ interface fUnlockScheduleSnapshot {
   durationSec: string
 }
 
-interface fPoolSnapshot {
+export interface fPoolSnapshot {
   asset: string
+  address: string
   stakingToken: string
   distributionToken: string
   startBonus: string
@@ -30,7 +37,7 @@ interface fPoolSnapshot {
   special?: string
 }
 
-interface fTrancheSnapshot {
+export interface fTrancheSnapshot {
   id: string
   startTimeOffset: string
   totalAmount: string
@@ -38,13 +45,16 @@ interface fTrancheSnapshot {
   pools: fPoolSnapshot[]
 }
 
-interface fDiggCoreSnapshot {
+export interface fDiggCoreSnapshot {
   diggToken: {
+    address: string
     totalSupply: string
     owner: string
     monetaryPolicy: string
+    rebaseStartTime: string
   }
   supplyPolicy: {
+    address: string
     owner: string
     uFrags: string
     deviationThreshold: string
@@ -56,57 +66,95 @@ interface fDiggCoreSnapshot {
     orchestrator: string
   }
   orchestrator: {
+    address: string
     owner: string
     policy: string
     transactions: string[]
   }
 }
 
-interface fDiggOraclesSnapshot {
+export interface fDiggOraclesSnapshot {
   marketMedianOracle: {
+    address: string
     owner: string
     providers: string[]
+    providersSize: string
     reportExpirationTimeSec: string
     reportDelaySec: string
     minimumProviders: string
   }
   cpiMedianOracle: {
+    address: string
     owner: string
     providers: string[]
+    providersSize: string
     reportExpirationTimeSec: string
     reportDelaySec: string
     minimumProviders: string
   }
   constantOracle: {
+    address: string
     value: string
     medianOracle: string
   }
   centralizedMarketOracle: {
+    address: string
     owners: any
     threshold: string
   }
 }
 
-interface fBadgerDAOSnapshot {
-  daoAgent: string
-  daoFinance: string
+export interface fBadgerDAOSnapshot {
+  agent: {
+    address: string
+    diggAmount: string
+    badgerAmount: string
+  }
+  finance: {
+    address: string
+  }
+  kernel: {
+    address: string
+  }
+  tokenManager: {
+    address: string
+  }
+  voting: {
+    address: string
+  }
   proxyAdmin: string
   badgerToken: {
+    address: string
     totalSupply: string
   }
-  badgerInTimelock: string
-  badgerInAgent: string
-  diggInTimelock: string
-  diggInAgent: string
+  badgerTimelock: {
+    address: string
+    amount: string
+  }
+  diggTimelock: {
+    address: string
+    amount: string
+  }
 }
 
-interface fUniswapPoolsSnapshot {
+export interface fUniswapCoreSnapshot {
+  uniswapV2Router: {
+    address: string
+  }
+  uniswapV2Factory: {
+    address: string
+  }
+}
+
+export interface fUniswapPoolsSnapshot {
   badgerEthPool: {
+    address: string
     badger: string
     weth: string
     totalSupply: string
   }
   diggEthPool: {
+    address: string
     digg: string
     weth: string
     totalSupply: string
@@ -115,40 +163,41 @@ interface fUniswapPoolsSnapshot {
 
 export interface fBalancerPoolsSnapshot {
   badgerEthPool: {
+    address: string
     badger?: string
     weth?: string
     totalSupply: string
   }
   diggEthPool: {
+    address: string
     digg?: string
     weth?: string
     totalSupply: string
   }
 }
 
-interface fBadgerDistributionPoolsSnapshot {
+export interface fDistributionPoolsSnapshot {
   tranches: fTrancheSnapshot[]
 }
 
-interface fDiggDistributionPoolsSnapshot {
-  tranches: fTrancheSnapshot[]
-}
-
-interface fStakingAssetsSnapshot {
+export interface fStakingAssetsSnapshot {
   [index: string]: {
+    address: string
     asset: string
     totalSupply: string
   }
 }
 
-interface fDaoTimelocksSnapshot {
+export interface fDaoTimelocksSnapshot {
   badgerTimelock: {
+    address: string
     locked: string
     releaseTime: string
     token: string
     beneficiary: string
   }
-  diggTimeLock: {
+  diggTimelock: {
+    address: string
     locked: string
     releaseTime: string
     token: string
@@ -156,30 +205,40 @@ interface fDaoTimelocksSnapshot {
   }
 }
 
-interface FormattedSnapshot {
+export interface FormattedSnapshot {
   diggCore: fDiggCoreSnapshot
   diggOracles: fDiggOraclesSnapshot
   badgerDAO: fBadgerDAOSnapshot
   uniswapPools: fUniswapPoolsSnapshot
   balancerPools: fBalancerPoolsSnapshot
-  badgerDistributionPools: fBadgerDistributionPoolsSnapshot
-  diggDistributionPools: fDiggDistributionPoolsSnapshot
+  badgerDistributionPools: fDistributionPoolsSnapshot
+  diggDistributionPools: fDistributionPoolsSnapshot
   stakingAssets: fStakingAssetsSnapshot
   daoTimelocks: fDaoTimelocksSnapshot
+  uniswapCore: fUniswapCoreSnapshot
+  weth: fWethSnapshot
+}
+
+export const exportSnapshot = (snapshot: BadgerSnapshot): boolean => {
+  fs.writeFileSync('local.json', JSON.stringify(formatSnapshot(snapshot)))
+  console.log(`Wrote deploy file to local.json`)
+  return true
 }
 
 export const formatSnapshot = (snapshot: BadgerSnapshot): FormattedSnapshot => {
   const formatted = {} as FormattedSnapshot
 
   const { diggToken, supplyPolicy, orchestrator } = snapshot.diggCore
-
   formatted.diggCore = {
     diggToken: {
+      address: diggToken.address,
       totalSupply: formatUnits(diggToken.totalSupply, 'gwei'),
       owner: diggToken.owner,
-      monetaryPolicy: diggToken.monetaryPolicy
+      monetaryPolicy: diggToken.monetaryPolicy,
+      rebaseStartTime: diggToken.rebaseStartTime.toString()
     },
     supplyPolicy: {
+      address: supplyPolicy.address,
       owner: supplyPolicy.owner,
       uFrags: supplyPolicy.uFrags,
       deviationThreshold: supplyPolicy.deviationThreshold.toString(),
@@ -191,6 +250,7 @@ export const formatSnapshot = (snapshot: BadgerSnapshot): FormattedSnapshot => {
       orchestrator: supplyPolicy.orchestrator
     },
     orchestrator: {
+      address: orchestrator.address,
       owner: orchestrator.owner,
       policy: orchestrator.policy,
       transactions: orchestrator.transactions
@@ -201,24 +261,30 @@ export const formatSnapshot = (snapshot: BadgerSnapshot): FormattedSnapshot => {
 
   formatted.diggOracles = {
     marketMedianOracle: {
+      address: marketMedianOracle.address,
       owner: marketMedianOracle.owner,
       providers: marketMedianOracle.providers,
       reportExpirationTimeSec: marketMedianOracle.reportExpirationTimeSec.toString(),
       reportDelaySec: marketMedianOracle.reportDelaySec.toString(),
-      minimumProviders: marketMedianOracle.minimumProviders.toString()
+      minimumProviders: marketMedianOracle.minimumProviders.toString(),
+      providersSize: marketMedianOracle.providersSize.toString()
     },
     cpiMedianOracle: {
+      address: cpiMedianOracle.address,
       owner: cpiMedianOracle.owner,
       providers: cpiMedianOracle.providers,
       reportExpirationTimeSec: cpiMedianOracle.reportExpirationTimeSec.toString(),
       reportDelaySec: cpiMedianOracle.reportDelaySec.toString(),
-      minimumProviders: cpiMedianOracle.minimumProviders.toString()
+      minimumProviders: cpiMedianOracle.minimumProviders.toString(),
+      providersSize: marketMedianOracle.providersSize.toString()
     },
     constantOracle: {
+      address: constantOracle.address,
       value: constantOracle.value.toString(),
       medianOracle: constantOracle.medianOracle
     },
     centralizedMarketOracle: {
+      address: centralizedMarketOracle.address,
       owners: centralizedMarketOracle.owners,
       threshold: centralizedMarketOracle.threshold.toString()
     }
@@ -231,47 +297,87 @@ export const formatSnapshot = (snapshot: BadgerSnapshot): FormattedSnapshot => {
     badgerDistributionPools,
     diggDistributionPools,
     stakingAssets,
-    daoTimelocks
+    daoTimelocks,
+    uniswapCore,
+    weth
   } = snapshot
 
-  formatted.badgerDAO= {
-    daoAgent: badgerDAO.daoAgent,
-    daoFinance: badgerDAO.daoFinance,
+  formatted.badgerDAO = {
+    agent: {
+      address: badgerDAO.agent.address,
+      badgerAmount: formatEther(badgerDAO.agent.badgerAmount),
+      diggAmount: formatUnits(badgerDAO.agent.diggAmount, 'gwei')
+    },
+    voting: {
+      address: badgerDAO.voting.address
+    },
+    finance: {
+      address: badgerDAO.finance.address
+    },
+    kernel: {
+      address: badgerDAO.kernel.address
+    },
+    tokenManager: {
+      address: badgerDAO.tokenManager.address
+    },
     proxyAdmin: badgerDAO.proxyAdmin,
     badgerToken: {
+      address: badgerDAO.badgerToken.address,
       totalSupply: formatEther(badgerDAO.badgerToken.totalSupply)
     },
-    badgerInTimelock: formatEther(badgerDAO.badgerInTimelock),
-    badgerInAgent: formatEther(badgerDAO.badgerInAgent),
-    diggInTimelock: formatUnits(badgerDAO.diggInTimelock, 'gwei'),
-    diggInAgent: formatUnits(badgerDAO.diggInAgent, 'gwei')
+    badgerTimelock: {
+      address: badgerDAO.badgerTimelock.address,
+      amount: formatEther(badgerDAO.badgerTimelock.amount)
+    },
+    diggTimelock: {
+      address: badgerDAO.diggTimelock.address,
+      amount: formatUnits(badgerDAO.diggTimelock.amount, 'gwei')
+    }
   }
 
   formatted.uniswapPools = {
     badgerEthPool: {
+      address: uniswapPools.badgerEthPool.address,
       badger: formatEther(uniswapPools.badgerEthPool.badger),
       weth: formatEther(uniswapPools.badgerEthPool.weth),
       totalSupply: formatEther(uniswapPools.badgerEthPool.totalSupply)
     },
     diggEthPool: {
+      address: uniswapPools.diggEthPool.address,
       digg: formatUnits(uniswapPools.diggEthPool.digg, 'gwei'),
       weth: formatEther(uniswapPools.diggEthPool.weth),
       totalSupply: formatEther(uniswapPools.diggEthPool.totalSupply)
     }
   }
 
+  formatted.uniswapCore = {
+    uniswapV2Factory: {
+      address: uniswapCore.uniswapV2Factory.address
+    },
+    uniswapV2Router: {
+      address: uniswapCore.uniswapV2Router.address
+    }
+  }
+
   formatted.balancerPools = {
     badgerEthPool: {
+      address: balancerPools.badgerEthPool.address,
       totalSupply: formatEther(balancerPools.badgerEthPool.totalSupply)
     },
     diggEthPool: {
+      address: balancerPools.diggEthPool.address,
       totalSupply: formatEther(balancerPools.diggEthPool.totalSupply)
     }
   }
 
+  formatted.weth = {
+    address: weth.address,
+    totalSupply: weth.totalSupply.toString()
+  }
+
   const fBadgerDistributionPools = {
     tranches: [] as fTrancheSnapshot[]
-  } as fBadgerDistributionPoolsSnapshot
+  } as fDistributionPoolsSnapshot
 
   for (const tranche of snapshot.badgerDistributionPools.tranches) {
     const trancheSnapshot = formatTrancheSnapshot(snapshot, tranche)
@@ -280,7 +386,7 @@ export const formatSnapshot = (snapshot: BadgerSnapshot): FormattedSnapshot => {
 
   const fDiggDistributionPools = {
     tranches: [] as fTrancheSnapshot[]
-  } as fDiggDistributionPoolsSnapshot
+  } as fDistributionPoolsSnapshot
 
   for (const tranche of snapshot.diggDistributionPools.tranches) {
     const trancheSnapshot = formatTrancheSnapshot(snapshot, tranche)
@@ -291,7 +397,7 @@ export const formatSnapshot = (snapshot: BadgerSnapshot): FormattedSnapshot => {
   formatted.diggDistributionPools = fDiggDistributionPools
   formatted.stakingAssets = formatStakingAssetsSnapshot(snapshot)
 
-  return formatted;
+  return formatted
 }
 
 export const formatStakingAssetsSnapshot = (snapshot: BadgerSnapshot): fStakingAssetsSnapshot => {
@@ -300,12 +406,13 @@ export const formatStakingAssetsSnapshot = (snapshot: BadgerSnapshot): fStakingA
   for (const key of Object.keys(snapshot.stakingAssets)) {
     const asset = snapshot.stakingAssets[key]
     const assetFormatted = {
+      address: asset.address,
       asset: asset.asset.toString(),
       totalSupply: formatEther(asset.totalSupply)
     }
     formatted[key] = assetFormatted
   }
-  return formatted;
+  return formatted
 }
 
 export const formatTrancheSnapshot = (snapshot: BadgerSnapshot, tranche: TrancheSnapshot): fTrancheSnapshot => {
@@ -317,10 +424,12 @@ export const formatTrancheSnapshot = (snapshot: BadgerSnapshot, tranche: Tranche
   formatted.totalAmount = tranche.totalAmount.toString()
 
   const pools = [] as fPoolSnapshot[]
+  console.log(`Tranche: ${tranche.id}`)
 
   for (const pool of tranche.pools) {
     const poolSnapshot = {} as fPoolSnapshot
 
+    poolSnapshot.address = pool.address
     poolSnapshot.asset = pool.asset
     poolSnapshot.stakingToken = pool.stakingToken
     poolSnapshot.distributionToken = pool.distributionToken
@@ -336,6 +445,9 @@ export const formatTrancheSnapshot = (snapshot: BadgerSnapshot, tranche: Tranche
     poolSnapshot.special = poolSnapshot.special?.toString()
 
     const formattedSchedules = [] as fUnlockScheduleSnapshot[]
+
+    console.log('number of unlock schedules', pool.unlockSchedules.length)
+
     for (const schedule of pool.unlockSchedules) {
       formattedSchedules.push({
         initialLockedShares: schedule.initialLockedShares.toString(),
@@ -346,8 +458,13 @@ export const formatTrancheSnapshot = (snapshot: BadgerSnapshot, tranche: Tranche
         durationSec: schedule.durationSec.toString()
       })
     }
+
+    poolSnapshot.unlockSchedules = formattedSchedules
+    console.log(`Push Pool ${poolSnapshot.address} for tranche ${tranche.id}`)
+
     pools.push(poolSnapshot)
   }
 
+  formatted.pools = pools
   return formatted
 }

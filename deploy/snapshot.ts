@@ -13,6 +13,11 @@ import {
 import * as _ from 'lodash'
 import { BadgerSystem, Tranche } from './BadgerSystem'
 
+export interface WethSnapshot {
+  address: string
+  totalSupply: BigNumber
+}
+
 export interface UnlockScheduleSnapshot {
   initialLockedShares: BigNumber
   unlockedShares: BigNumber
@@ -24,6 +29,7 @@ export interface UnlockScheduleSnapshot {
 
 export interface PoolSnapshot {
   asset: PoolAssets
+  address: string
   stakingToken: string
   distributionToken: string
   startBonus: BigNumber
@@ -49,12 +55,14 @@ export interface TrancheSnapshot {
 
 export interface DiggCoreSnapshot {
   diggToken: {
+    address: string
     totalSupply: BigNumber
     owner: string
     monetaryPolicy: string
     rebaseStartTime: BigNumber
   }
   supplyPolicy: {
+    address: string
     owner: string
     uFrags: string
     deviationThreshold: BigNumber
@@ -66,6 +74,7 @@ export interface DiggCoreSnapshot {
     orchestrator: string
   }
   orchestrator: {
+    address: string
     owner: string
     policy: string
     transactions: string[]
@@ -74,6 +83,7 @@ export interface DiggCoreSnapshot {
 
 export interface DiggOraclesSnapshot {
   marketMedianOracle: {
+    address: string
     owner: string
     providers: string[]
     providersSize: BigNumber
@@ -82,6 +92,7 @@ export interface DiggOraclesSnapshot {
     minimumProviders: BigNumber
   }
   cpiMedianOracle: {
+    address: string
     owner: string
     providers: string[]
     providersSize: BigNumber
@@ -90,48 +101,83 @@ export interface DiggOraclesSnapshot {
     minimumProviders: BigNumber
   }
   constantOracle: {
+    address: string
     value: BigNumber
     medianOracle: string
   }
   centralizedMarketOracle: {
+    address: string
     owners: any
     threshold: BigNumber
   }
 }
 
 export interface BadgerDAOSnapshot {
-  daoAgent: string
-  daoFinance: string
+  agent: {
+    address: string
+    diggAmount: BigNumber
+    badgerAmount: BigNumber
+  }
+  finance: {
+    address: string
+  }
+  kernel: {
+    address: string
+  }
+  tokenManager: {
+    address: string
+  }
+  voting: {
+    address: string
+  }
   proxyAdmin: string
   badgerToken: {
+    address: string
     totalSupply: BigNumber
   }
-  badgerInTimelock: BigNumber
-  badgerInAgent: BigNumber
-  diggInTimelock: BigNumber
-  diggInAgent: BigNumber
+  badgerTimelock: {
+    address: string
+    amount: BigNumber
+  }
+  diggTimelock: {
+    address: string
+    amount: BigNumber
+  }
 }
 
 export interface UniswapPoolsSnapshot {
   badgerEthPool: {
+    address: string
     badger: BigNumber
     weth: BigNumber
     totalSupply: BigNumber
   }
   diggEthPool: {
+    address: string
     digg: BigNumber
     weth: BigNumber
     totalSupply: BigNumber
   }
 }
 
+export interface UniswapCoreSnapshot {
+  uniswapV2Router: {
+    address: string
+  }
+  uniswapV2Factory: {
+    address: string
+  }
+}
+
 export interface BalancerPoolsSnapshot {
   badgerEthPool: {
+    address: string
     badger?: BigNumber
     weth?: BigNumber
     totalSupply: BigNumber
   }
   diggEthPool: {
+    address: string
     digg?: BigNumber
     weth?: BigNumber
     totalSupply: BigNumber
@@ -144,6 +190,7 @@ export interface DistributionPoolsSnapshot {
 
 export interface StakingAssetsSnapshot {
   [index: string]: {
+    address: string
     asset: string
     totalSupply: BigNumber
   }
@@ -151,12 +198,14 @@ export interface StakingAssetsSnapshot {
 
 export interface DaoTimelocksSnapshot {
   badgerTimelock: {
+    address: string
     locked: BigNumber
     releaseTime: BigNumber
     token: string
     beneficiary: string
   }
-  diggTimeLock: {
+  diggTimelock: {
+    address: string
     locked: BigNumber
     releaseTime: BigNumber
     token: string
@@ -168,12 +217,14 @@ export interface BadgerSnapshot {
   diggCore: DiggCoreSnapshot
   diggOracles: DiggOraclesSnapshot
   badgerDAO: BadgerDAOSnapshot
+  uniswapCore: UniswapCoreSnapshot
   uniswapPools: UniswapPoolsSnapshot
   balancerPools: BalancerPoolsSnapshot
   badgerDistributionPools: DistributionPoolsSnapshot
   diggDistributionPools: DistributionPoolsSnapshot
   stakingAssets: StakingAssetsSnapshot
   daoTimelocks: DaoTimelocksSnapshot
+  weth: WethSnapshot
 
   config: SystemConfig
   deployer: Signer
@@ -186,12 +237,14 @@ export const getSnapshot = async (badger: BadgerSystem): Promise<BadgerSnapshot>
 
   _.set(snapshot, 'diggCore', {
     diggToken: {
+      address: diggToken.address,
       totalSupply: await diggToken.totalSupply(),
       owner: await diggToken.owner(),
       monetaryPolicy: await diggToken.monetaryPolicy(),
       rebaseStartTime: await diggToken.rebaseStartTime()
     },
     supplyPolicy: {
+      address: supplyPolicy.address,
       owner: await supplyPolicy.owner(),
       uFrags: await supplyPolicy.uFrags(),
       deviationThreshold: await supplyPolicy.deviationThreshold(),
@@ -203,6 +256,7 @@ export const getSnapshot = async (badger: BadgerSystem): Promise<BadgerSnapshot>
       orchestrator: await supplyPolicy.orchestrator()
     },
     orchestrator: {
+      address: orchestrator.address,
       owner: await orchestrator.owner(),
       policy: await orchestrator.policy(),
       transactions: [] // TODO: Track transaction recipients if / when they are used
@@ -216,6 +270,7 @@ export const getSnapshot = async (badger: BadgerSystem): Promise<BadgerSnapshot>
 
   _.set(snapshot, 'diggOracles', {
     marketMedianOracle: {
+      address: marketMedianOracle.address,
       owner: await marketMedianOracle.owner(),
       providersSize: await marketMedianOracle.providersSize(),
       providers: [marketProvider],
@@ -224,6 +279,7 @@ export const getSnapshot = async (badger: BadgerSystem): Promise<BadgerSnapshot>
       minimumProviders: await marketMedianOracle.minimumProviders()
     },
     cpiMedianOracle: {
+      address: cpiMedianOracle.address,
       owner: await cpiMedianOracle.owner(),
       providersSize: await cpiMedianOracle.providersSize(),
       providers: [cpiProvider],
@@ -232,34 +288,56 @@ export const getSnapshot = async (badger: BadgerSystem): Promise<BadgerSnapshot>
       minimumProviders: await cpiMedianOracle.minimumProviders()
     },
     constantOracle: {
+      address: constantOracle.address,
       value: await constantOracle.value(),
       medianOracle: await constantOracle.medianOracle()
     },
     centralizedMarketOracle: {
+      address: centralizedMarketOracle.address,
       owners: await centralizedMarketOracle.getOwners(),
       threshold: await centralizedMarketOracle.getThreshold()
     }
   })
 
   const {
-    badgerDAO: { daoAgent, daoFinance, proxyAdmin, badgerToken },
-    daoTimelocks: { badgerTimelock, diggTimeLock }
+    badgerDAO: { daoAgent, daoFinance, finance, agent, voting, kernel, tokenManager, proxyAdmin, badgerToken },
+    daoTimelocks: { badgerTimelock, diggTimelock }
   } = badger
 
   _.set(snapshot, 'badgerDAO', {
-    daoAgent,
-    daoFinance,
+    agent: {
+      address: agent.address,
+      badgerAmount: await badgerToken.balanceOf(daoAgent),
+      diggAmount: await diggToken.balanceOf(daoAgent)
+    },
+    finance: {
+      address: finance.address
+    },
+    voting: {
+      address: voting.address
+    },
+    kernel: {
+      address: kernel.address
+    },
+    tokenManager: {
+      address: tokenManager.address
+    },
     proxyAdmin,
     badgerToken: {
+      address: badgerToken.address,
       totalSupply: await badgerToken.totalSupply()
     },
-    badgerInTimelock: await badgerToken.balanceOf(badgerTimelock.address),
-    badgerInAgent: await badgerToken.balanceOf(daoAgent),
-    diggInTimelock: await diggToken.balanceOf(diggTimeLock.address),
-    diggInAgent: await diggToken.balanceOf(daoAgent)
+    badgerTimelock: {
+      address: badgerTimelock.address,
+      amount: await badgerToken.balanceOf(badgerTimelock.address)
+    },
+    diggTimelock: {
+      address: diggTimelock.address,
+      amount: await diggToken.balanceOf(diggTimelock.address)
+    }
   })
 
-  const { uniswapPools, balancerPools, weth } = badger
+  const { uniswapPools, uniswapCore, balancerPools, weth } = badger
 
   const badgerEthReserves = await uniswapPools.badgerEthPool.getReserves()
   const diggEthReserves = await uniswapPools.diggEthPool.getReserves()
@@ -269,28 +347,47 @@ export const getSnapshot = async (badger: BadgerSystem): Promise<BadgerSnapshot>
 
   _.set(snapshot, 'uniswapPools', {
     badgerEthPool: {
+      address: uniswapPools.badgerEthPool.address,
       badger: badgerEthReserves[0],
       weth: badgerEthReserves[1],
       totalSupply: await uniswapPools.badgerEthPool.totalSupply()
     },
     diggEthPool: {
+      address: uniswapPools.diggEthPool.address,
       digg: diggEthReserves[0],
       weth: diggEthReserves[1],
-      totalSupply: await uniswapPools.badgerEthPool.totalSupply()
+      totalSupply: await uniswapPools.diggEthPool.totalSupply()
     }
   })
 
   _.set(snapshot, 'balancerPools', {
     badgerEthPool: {
+      address: balancerPools.badgerEthPool.address,
     //   badger: await balancerPools.badgerEthPool.getBalance(badgerToken.address),
     //   weth: await balancerPools.badgerEthPool.getBalance(weth.address),
       totalSupply: await balancerPools.badgerEthPool.totalSupply()
     },
     diggEthPool: {
+      address: balancerPools.diggEthPool.address,
     //   badger: await balancerPools.diggEthPool.getBalance(diggToken.address),
     //   weth: await balancerPools.diggEthPool.getBalance(weth.address),
       totalSupply: await balancerPools.diggEthPool.totalSupply()
     }
+  })
+
+  _.set(snapshot, 'uniswapCore', {
+    uniswapV2Factory: {
+      address: uniswapCore.uniswapV2Factory.address
+    },
+    uniswapV2Router: {
+      address: uniswapCore.uniswapV2Router.address
+    }
+  })
+
+
+  _.set(snapshot, 'weth', {
+    address: badger.weth.address,
+    totalSupply: await weth.totalSupply()
   })
 
   const badgerDistributionPools = {
@@ -325,11 +422,11 @@ export const getSnapshot = async (badger: BadgerSystem): Promise<BadgerSnapshot>
       token: await badgerTimelock.token(),
       beneficiary: await badgerTimelock.beneficiary()
     },
-    diggTimeLock: {
-      locked: await diggToken.balanceOf(diggTimeLock.address),
-      releaseTime: await diggTimeLock.releaseTime(),
-      token: await diggTimeLock.token(),
-      beneficiary: await diggTimeLock.beneficiary()
+    diggTimelock: {
+      locked: await diggToken.balanceOf(diggTimelock.address),
+      releaseTime: await diggTimelock.releaseTime(),
+      token: await diggTimelock.token(),
+      beneficiary: await diggTimelock.beneficiary()
     }
   })
 
@@ -350,6 +447,7 @@ export const getStakingAssetsSnapshot = async (badger: BadgerSystem): Promise<St
   for (const key of Object.keys(badger.stakingAssets)) {
     const assetContract = badger.stakingAssets[key]
     const assetSnapshot = {
+      address: assetContract.address,
       asset: key,
       totalSupply: await assetContract.totalSupply()
     }
@@ -373,6 +471,7 @@ export const getTrancheSnapshot = async (badger: BadgerSystem, tranche: Tranche)
     const poolSnapshot = {} as PoolSnapshot
     const contract = pool.contract
 
+    poolSnapshot.address = pool.contract.address
     poolSnapshot.asset = pool.asset
     poolSnapshot.stakingToken = await contract.getStakingToken()
     poolSnapshot.distributionToken = await contract.getDistributionToken()
@@ -398,6 +497,5 @@ export const getTrancheSnapshot = async (badger: BadgerSystem, tranche: Tranche)
     pools.push(poolSnapshot)
   }
   snapshot.pools = pools
-
   return snapshot
 }

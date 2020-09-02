@@ -33,7 +33,7 @@ export enum ChainIds {
 
 dotenv.config()
 
-export async function deploySystem(): Promise<{
+export async function loadSystem(): Promise<{
   badger: BadgerSystem
   deploySnapshot: BadgerSnapshot
   config: SystemConfig
@@ -54,49 +54,15 @@ export async function deploySystem(): Promise<{
   const badger = new BadgerSystem(deployConfig, web3, deployer)
 
   console.log(colors.title('---Connect or Deploy External Dependencies---'))
-  await badger.connectOrDeployUniswap()
-  await badger.connectOrDeployStakingAssets()
-  console.log('')
-
-  console.log(colors.title('---Deploy DAO---'))
-  await badger.deployDAO()
-  console.log('')
-
-  console.log(colors.title('---Deploy DIGG Core---'))
-  await badger.deployCore()
-  console.log('')
-
-  console.log(colors.title('---Deploy DIGG Oracles---'))
-  await badger.deployDiggOracles()
-  console.log('')
-
-  console.log(colors.title('---Initialize DIGG Parameters---'))
-  await badger.initializeCore()
-  console.log('')
-
-  console.log(colors.title('---Deploy Liquidity Pools---'))
-  await badger.deployUniswapPools()
-  await badger.deployBalancerPools()
-  console.log('')
-
-  console.log(colors.title('---Deploy Distribution Pools---'))
-  await badger.deployDistributionPools()
-  console.log('')
-
-  console.log(colors.title('---Deploy DAO Token TimeLocks---'))
-  await badger.deployTokenTimelocks()
-
-  console.log(colors.title('---Transfer Contract Ownership to DAO---'))
-  await badger.transferToDao()
-
-  console.log(colors.yellow('\nBadger Deploy Complete') + ' 💪\n')
+  // await badger.loadFromFile(path)
 
   console.log(colors.testTitle('---Confirm Deployment Parameters---'))
   const deploySnapshot = await getSnapshot(badger)
   compareSnapshotToDeploy(badger, deploySnapshot, deployConfig)
   console.log(colors.yellow('Badger Deploy Initial Snapshot Confirmed ✅'))
-  // exportSnapshot(deploySnapshot)
-  // console.log(colors.green('Snapshot written to disk /instances/local'))
+
+  exportSnapshot(deploySnapshot)
+  console.log(colors.green('Snapshot written to disk /instances/local'))
 
   return { badger, deploySnapshot, config: deployConfig }
 }
