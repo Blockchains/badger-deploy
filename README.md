@@ -51,11 +51,15 @@ Managing the various environment setups, installation, compilation, and storing 
 
 The source code for all artifacts can be found in the following repos:
 
-- [Badger DAO Template @latest](https://github.com/Badger-Finance/badger-dao)
-- [Digg Core @latest](https://github.com/Badger-Finance/digg-core)
-- [Digg Oracles @latest](https://github.com/Badger-Finance/digg-oracles)
-- [Gnosis Safe @94f9b90](https://github.com/gnosis/safe-contracts)
-- [Balancer Core @f4ed5d6](https://github.com/balancer-labs/balancer-core)
-- [Uniswap-v2-Core @4dd5906](https://github.com/Uniswap/uniswap-v2-core)
-- [Uniswap-v2-Periphery @4123f93](https://github.com/Uniswap/uniswap-v2-periphery/)
-- [Openzeppelin Contracts @cb791a1](https://github.com/OpenZeppelin/openzeppelin-contracts)
+- [Badger DAO Template](https://github.com/Badger-Finance/badger-dao) @latest
+    - [Based on Aragon DAO Templates](https://github.com/aragon/dao-templates) @3e1c3a5
+- [Badger Geyser](https://github.com/Badger-Finance/badger-geyser) @latest
+- [Badger SmartTimelock](https://github.com/Badger-Finance/badger-timelock) @latest
+- [Digg Core](https://github.com/Badger-Finance/digg-core) @latest
+- [Digg Oracles](https://github.com/Badger-Finance/digg-oracles) @latest
+
+- [Gnosis Safe](https://github.com/gnosis/safe-contracts) @94f9b90
+- [Balancer Core](https://github.com/balancer-labs/balancer-core) @f4ed5d6
+- [Uniswap-v2-Core](https://github.com/Uniswap/uniswap-v2-core) @4dd5906
+- [Uniswap-v2-Periphery](https://github.com/Uniswap/uniswap-v2-periphery/) @4123f93
+- [Openzeppelin Contracts](https://github.com/OpenZeppelin/openzeppelin-contracts) @cb791a1
