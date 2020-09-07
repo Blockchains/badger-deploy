@@ -3,8 +3,6 @@ const { hash: namehash } = require('eth-ens-namehash')
 
 import BadgerDAOTemplate from '../../dependency-artifacts/badger-dao/BadgerDAOTemplate.json'
 
-import {overrides} from '../BadgerSystem'
-
 import MiniMeTokenFactory from '../../dependency-artifacts/badger-dao/MiniMeTokenFactory.json'
 import Agent from '../../dependency-artifacts/badger-dao/Agent.json'
 import Vault from '../../dependency-artifacts/badger-dao/Vault.json'
@@ -90,7 +88,6 @@ export class TemplateDeployer {
 
   async _checkAppsDeployment() {
     for (const { name, contractName, artifact } of APPS) {
-      console.log('Registering App...', name, contractName )
       await this._registerApp(name, artifact)
     }
   }
@@ -146,8 +143,7 @@ export class TemplateDeployer {
 
   async _registerApp(name: string, artifact: any) {
     // @ts-ignore
-    const app = await deployContract(this.deployer, artifact, undefined, overrides)
-    console.log(`App ${name} deployed at ${app.address}`)
+    const app = await deployContract(this.deployer, artifact, undefined, {gasLimit: 12500000 })
     return this._registerPackage(name, app)
   }
 

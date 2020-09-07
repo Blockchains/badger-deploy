@@ -173,7 +173,7 @@ externalPoolAddresses.MAINNET[PoolAssets.Based] = '0x68A118Ef45063051Eac49c7e647
 externalPoolAddresses.MAINNET[PoolAssets.LEND] = '0x80fB784B7eD66730e8b1DBd9820aFD29931aab03'
 
 export enum Special {
-  REN_BADGER
+  REN_BADGER = "REN_BADGER"
 }
 
 export interface PoolConfig {
@@ -208,8 +208,8 @@ export interface SystemConfig {
     totalSupply: BigNumber
   }
   tokenLockParams: {
-    badgerLockAmount: BigNumber,
-    diggLockAmount: BigNumber,
+    badgerLockAmount: BigNumber
+    diggLockAmount: BigNumber
     lockDuration: BigNumber
   }
   diggParams: {
@@ -233,15 +233,16 @@ export interface SystemConfig {
     minimumProviders: BigNumber
   }
   centralizedOracleParams: {
-    owners: string[],
+    owners: string[]
     threshold: BigNumber
   }
-  tokenGeyser: {
+  badgerGeyser: {
     maxUnlockSchedules: BigNumber
     startBonus: BigNumber
     bonusPeriodSec: BigNumber
     initialSharesPerToken: BigNumber
     unlockSchedules: { amount: BigNumber; durationSec: BigNumber }[]
+    founderRewardPercentage: BigNumber
   }
   badgerTranches: TrancheConfig[]
   trancheStart: BigNumber
@@ -268,27 +269,25 @@ const RINKEBY: SystemConfig = {
   },
   tokenLockParams: {
     badgerLockAmount: utils.parseUnits('10500000', 'ether'),
-    diggLockAmount: BigNumber.from(3125)
-    .mul(10 ** 9),
+    diggLockAmount: BigNumber.from(3125).mul(10 ** 9),
     lockDuration: daysToSeconds(30)
   },
   badgerParams: {
     totalSupply: utils.parseUnits('21000000', 'ether')
   },
   daoParams: {
-    tokenName: "Badger",
-    tokenSymbol: "BADGER",
-    id: "badger-finance",
-    initialSupply: utils.parseEther("21000000"),
+    tokenName: 'Badger',
+    tokenSymbol: 'BADGER',
+    id: 'badger-finance',
+    initialSupply: utils.parseEther('21000000'),
     financePeriod: BigNumber.from(0),
     useAgentAsVault: true,
-    supportRequired: utils.parseEther("0.5"),
-    minAcceptanceQuorum: utils.parseEther("0.05"),
+    supportRequired: utils.parseEther('0.5'),
+    minAcceptanceQuorum: utils.parseEther('0.05'),
     voteDuration: daysToSeconds(7)
   },
   diggParams: {
-    initialSupply: BigNumber.from(6250)
-      .mul(10 ** 9),
+    initialSupply: BigNumber.from(6250).mul(10 ** 9),
     deviationThreshold: BigNumber.from('50000000000000000'),
     rebaseLag: BigNumber.from(10),
     minRebaseTimeIntervalSec: BigNumber.from(86400),
@@ -311,7 +310,7 @@ const RINKEBY: SystemConfig = {
     owners: [],
     threshold: BigNumber.from(1)
   },
-  tokenGeyser: {
+  badgerGeyser: {
     maxUnlockSchedules: BigNumber.from(10000),
     startBonus: BigNumber.from(100),
     bonusPeriodSec: BigNumber.from('1'),
@@ -321,7 +320,8 @@ const RINKEBY: SystemConfig = {
         amount: BigNumber.from('75000000000000000000'),
         durationSec: BigNumber.from('7776000')
       }
-    ]
+    ],
+    founderRewardPercentage: BigNumber.from('10')
   },
   trancheStart: BigNumber.from(getCurrentTimestamp() + daysToSeconds(1).toNumber()),
   badgerTranches: [
@@ -575,5 +575,5 @@ const RINKEBY: SystemConfig = {
 }
 
 export default {
-  RINKEBY,
+  RINKEBY
 }

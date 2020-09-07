@@ -54,7 +54,7 @@ import BPool from '../dependency-artifacts/balancer-core/BPool.json'
 import { deployUniswapSystem } from './uniswap/deploy'
 
 // Geyser
-import TokenGeyser from '../dependency-artifacts/badger-geyser/TokenGeyser.json'
+import BadgerGeyser from '../dependency-artifacts/badger-geyser/BadgerGeyser.json'
 import { deployGnosisSafeInfrastructure, deployGnosisSafe } from './gnosis-safe/deploy'
 import { deployAndConfigBalancerPool } from './balancer/deploy'
 import { formatTime } from './test/helpers/time'
@@ -91,9 +91,9 @@ export const overrides = {
 
 export interface DiggCore {
   diggToken: Contract
-  diggTokenLogic: Contract
+  diggTokenLogic?: Contract
   supplyPolicy: Contract
-  supplyPolicyLogic: Contract
+  supplyPolicyLogic?: Contract
   orchestrator: Contract
 }
 
@@ -184,7 +184,7 @@ export class BadgerSystem {
     } = this
     const deployerAddress = await this.deployer.getAddress()
     await deployAragonInfrastructure(deployer)
-    console.log('aragon infra')
+    console.log('Deployed Aragon Infrastructure')
     await deployGnosisSafeInfrastructure(deployer)
     const dao = await deployBadgerDAO(deployer, {
       tokenName: daoParams.tokenName,
@@ -241,9 +241,7 @@ export class BadgerSystem {
     }
 
     console.log(`diggToken: ${this.diggCore.diggToken.address}`),
-    console.log(`diggTokenLogic: ${this.diggCore.diggTokenLogic.address}`),
     console.log(`supplyPolicy: ${this.diggCore.supplyPolicy.address}`)
-    console.log(`supplyPolicyLogic: ${this.diggCore.supplyPolicyLogic.address}`)
     console.log(`orchestrator: ${this.diggCore.orchestrator.address}`)
   }
 
@@ -480,7 +478,7 @@ export class BadgerSystem {
 
         console.log(`Deployed dummy staking asset ${pool} at address ${assetContract.address}`)
 
-        const tx = await assetContract.mint(deployerAddress, utils.parseEther('1000000000'))
+        const tx = await assetContract.mint(deployerAddress, utils.parseEther('10000000000000000'))
         await tx.wait()
         stakingAssets[pool] = assetContract
       }
@@ -502,6 +500,8 @@ export class BadgerSystem {
     const { config, deployer } = this
     console.log(`Starting tranche ${tranche.id}`)
 
+    const deployerAddress = await deployer.getAddress()
+
     const pools = [] as Pool[]
 
     const trancheStart = config.trancheStart.add(tranche.startTimeOffset)
@@ -521,15 +521,17 @@ export class BadgerSystem {
 
       const poolContract = await deployContract(
         deployer,
-        TokenGeyser,
+        BadgerGeyser,
         [
           assetContract.address,
           distributionToken.address,
-          config.tokenGeyser.maxUnlockSchedules,
-          config.tokenGeyser.startBonus,
-          config.tokenGeyser.bonusPeriodSec,
-          config.tokenGeyser.initialSharesPerToken,
-          trancheStart
+          config.badgerGeyser.maxUnlockSchedules,
+          config.badgerGeyser.startBonus,
+          config.badgerGeyser.bonusPeriodSec,
+          config.badgerGeyser.initialSharesPerToken,
+          trancheStart,
+          deployerAddress,
+          config.badgerGeyser.founderRewardPercentage
         ],
         overrides
       )
@@ -628,6 +630,7 @@ export class BadgerSystem {
       this.getTimelockRelease()
     ])
 
+
     await (await badgerToken.approve(badgerTimelock.address, ethers.constants.MaxUint256)).wait()
     await (await badgerToken.transfer(badgerTimelock.address, config.tokenLockParams.badgerLockAmount)).wait()
     await (await diggToken.approve(diggTimelock.address, ethers.constants.MaxUint256)).wait()
@@ -705,4 +708,110 @@ export class BadgerSystem {
 
     return pools
   }
+
+  async loadFromFile(path: string, deployer: Signer, config: SystemConfig) {
+    const json = fs.readFileSync(path)
+     const snapshot = JSON.parse(json) as FormattedSnapshot
+ 
+     this.diggCore = {
+       diggToken: new Contract(snapshot.diggCore.diggToken.address, UFragments.abi, deployer),
+       supplyPolicy: new Contract(snapshot.diggCore.supplyPolicy.address, UFragmentsPolicy.abi, deployer),
+       orchestrator: new Contract(snapshot.diggCore.orchestrator.address, Orchestrator.abi, deployer)
+     }
+ 
+     this.diggOracles = {
+       marketMedianOracle: new Contract(snapshot.diggOracles.marketMedianOracle.address, MedianOracle.abi, deployer),
+       cpiMedianOracle: new Contract(snapshot.diggOracles.cpiMedianOracle.address, MedianOracle.abi, deployer),
+       constantOracle: new Contract(snapshot.diggOracles.constantOracle.address, ConstantOracle.abi, deployer),
+       centralizedMarketOracle: new Contract(snapshot.diggOracles.centralizedMarketOracle.address, GnosisSafe.abi, deployer)
+     }
+ 
+     this.badgerDAO = {
+       daoAgent: snapshot.badgerDAO.agent.address,
+       daoFinance: snapshot.badgerDAO.finance.address,
+       agent: new Contract(snapshot.badgerDAO.agent.address, Agent.abi, deployer),
+       finance: new Contract(snapshot.badgerDAO.finance.address, Finance.abi, deployer),
+       proxyAdmin: new Contract(snapshot.badgerDAO.proxyAdmin.address, ProxyAdmin.abi, deployer),
+       kernel: new Contract(snapshot.badgerDAO.kernel.address, Kernel.abi, deployer),
+       voting: new Contract(snapshot.badgerDAO.voting.address, Voting.abi, deployer),
+       tokenManager: new Contract(snapshot.badgerDAO.tokenManager.address, TokenManager.abi, deployer),
+       badgerToken: new Contract(snapshot.badgerDAO.badgerToken.address, MiniMeToken.abi, deployer)
+     }
+ 
+     this.uniswapCore = {
+       uniswapV2Factory: new Contract(snapshot.uniswapCore.uniswapV2Factory.address, UniswapV2Factory.abi, deployer),
+       uniswapV2Router: new Contract(snapshot.uniswapCore.uniswapV2Router.address, UniswapV2Router02.abi, deployer),
+     }
+ 
+     this.uniswapPools = {
+       badgerEthPool: new Contract(snapshot.uniswapPools.badgerEthPool.address, UniswapV2Pair.abi, deployer),
+       diggEthPool: new Contract(snapshot.uniswapPools.diggEthPool.address, UniswapV2Pair.abi, deployer),
+     }
+ 
+     this.balancerPools = {
+       badgerEthPool: new Contract(snapshot.balancerPools.badgerEthPool.address, BPool.abi, deployer),
+       diggEthPool: new Contract(snapshot.balancerPools.diggEthPool.address, BPool.abi, deployer),
+     }
+ 
+     this.weth = new Contract(snapshot.weth.address, WETH9.abi, deployer)
+ 
+     this.badgerDistributionPools = {
+       tranches: []
+     }
+ 
+     for (const trancheSnapshot of snapshot.badgerDistributionPools.tranches) {
+       this.badgerDistributionPools.tranches.push(this.loadTranche(trancheSnapshot, deployer))
+     }
+ 
+     this.diggDistributionPools = {
+       tranches: []
+     }
+ 
+     for (const trancheSnapshot of snapshot.diggDistributionPools.tranches) {
+       this.diggDistributionPools.tranches.push(this.loadTranche(trancheSnapshot, deployer))
+     }
+ 
+     this.stakingAssets = {}
+     for (const key of Object.keys(snapshot.stakingAssets)) {
+       const assetSnapshot = snapshot.stakingAssets[key]
+       this.stakingAssets[assetSnapshot.asset] = new Contract(assetSnapshot.address, IERC20.abi, deployer);
+     }
+
+     console.log('timeLocks', snapshot.daoTimelocks)
+     console.log(snapshot.daoTimelocks.badgerTimelock.address)
+     console.log(snapshot.daoTimelocks.diggTimelock.address)
+  
+     this.daoTimelocks = {
+       badgerTimelock: new Contract(snapshot.daoTimelocks.badgerTimelock.address, TokenTimelock.abi, deployer),
+       diggTimelock: new Contract(snapshot.daoTimelocks.diggTimelock.address, TokenTimelock.abi, deployer)
+     }
+ 
+     this.config = config
+     this.deployer = deployer
+     this.deployerAddress = await deployer.getAddress()
+   }
+ 
+   loadTranche(trancheSnapshot: fTrancheSnapshot, deployer: Signer): Tranche {
+       const tranche: Tranche = {
+         id: trancheSnapshot.id,
+         startTimeOffset: BigNumber.from(trancheSnapshot.startTimeOffset),
+         totalAmount: BigNumber.from(trancheSnapshot.totalAmount),
+         duration: BigNumber.from(trancheSnapshot.duration),
+         pools: [],
+       }
+ 
+       const pools: Pool[] = []
+ 
+       for (const poolSnapshot of trancheSnapshot.pools) {
+         const pool: Pool = {
+           asset: poolSnapshot.asset as PoolAssets,
+           contract: new Contract (poolSnapshot.address, BadgerGeyser.abi, deployer),
+           rewardMultiplier: poolSnapshot.rewardMultiplier ? BigNumber.from(poolSnapshot.rewardMultiplier) : undefined,
+         }
+           pools.push(pool)
+       }
+ 
+      tranche.pools = pools;
+      return tranche;
+     }
 }

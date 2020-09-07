@@ -130,7 +130,9 @@ export interface BadgerDAOSnapshot {
   voting: {
     address: string
   }
-  proxyAdmin: string
+  proxyAdmin: {
+    address: string
+  }
   badgerToken: {
     address: string
     totalSupply: BigNumber
@@ -322,7 +324,9 @@ export const getSnapshot = async (badger: BadgerSystem): Promise<BadgerSnapshot>
     tokenManager: {
       address: tokenManager.address
     },
-    proxyAdmin,
+    proxyAdmin: {
+      address: proxyAdmin.address
+    },
     badgerToken: {
       address: badgerToken.address,
       totalSupply: await badgerToken.totalSupply()

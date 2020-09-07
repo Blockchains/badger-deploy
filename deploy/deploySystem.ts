@@ -9,6 +9,7 @@ const HDWalletProvider = require('truffle-hdwallet-provider')
 import { getSnapshot, BadgerSnapshot } from './snapshot'
 import { exportSnapshot, formatSnapshot } from './io/writeSnapshot'
 import { compareSnapshotToDeploy } from './shapshotTest'
+import { Signer } from 'ethers'
 export const colors = require('colors/safe')
 
 colors.setTheme({
@@ -31,23 +32,19 @@ export enum ChainIds {
   LOCAL = 31337
 }
 
-dotenv.config()
+dotenv.config();
 
-export async function deploySystem(): Promise<{
+export async function deploySystem(jsonRpcProvider, deployer: Signer): Promise<{
   badger: BadgerSystem
   deploySnapshot: BadgerSnapshot
   config: SystemConfig
 }> {
-  const signers = await ethers.getSigners()
 
-  const jsonRpcProvider = ethers.provider
   const url = jsonRpcProvider.connection.url
   console.log(`Connected to Node @ ${url}`)
 
   const web3Provider = new HDWalletProvider(process.env.MNEMONIC, url)
   const web3 = new Web3(web3Provider)
-
-  const deployer = signers[0]
 
   const deployConfig = config.RINKEBY
   deployConfig.network = ChainIds.LOCAL
@@ -95,7 +92,7 @@ export async function deploySystem(): Promise<{
   const deploySnapshot = await getSnapshot(badger)
   compareSnapshotToDeploy(badger, deploySnapshot, deployConfig)
   console.log(colors.yellow('Badger Deploy Initial Snapshot Confirmed ✅'))
-  // exportSnapshot(deploySnapshot)
+  exportSnapshot(deploySnapshot)
   // console.log(colors.green('Snapshot written to disk /instances/local'))
 
   return { badger, deploySnapshot, config: deployConfig }

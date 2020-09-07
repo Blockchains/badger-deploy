@@ -122,7 +122,9 @@ export interface fBadgerDAOSnapshot {
   voting: {
     address: string
   }
-  proxyAdmin: string
+  proxyAdmin: {
+    address: string
+  }
   badgerToken: {
     address: string
     totalSupply: string
@@ -220,7 +222,11 @@ export interface FormattedSnapshot {
 }
 
 export const exportSnapshot = (snapshot: BadgerSnapshot): boolean => {
-  fs.writeFileSync('local.json', JSON.stringify(formatSnapshot(snapshot)))
+  const formatted = formatSnapshot(snapshot);
+  console.log(`Formatted`)
+  const stringified = JSON.stringify(formatted)
+  console.log(`Stringified`)
+  fs.writeFileSync('local.json', stringified)
   console.log(`Wrote deploy file to local.json`)
   return true
 }
@@ -320,7 +326,9 @@ export const formatSnapshot = (snapshot: BadgerSnapshot): FormattedSnapshot => {
     tokenManager: {
       address: badgerDAO.tokenManager.address
     },
-    proxyAdmin: badgerDAO.proxyAdmin,
+    proxyAdmin: {
+      address: badgerDAO.proxyAdmin.address
+    },
     badgerToken: {
       address: badgerDAO.badgerToken.address,
       totalSupply: formatEther(badgerDAO.badgerToken.totalSupply)
@@ -397,11 +405,28 @@ export const formatSnapshot = (snapshot: BadgerSnapshot): FormattedSnapshot => {
   formatted.diggDistributionPools = fDiggDistributionPools
   formatted.stakingAssets = formatStakingAssetsSnapshot(snapshot)
 
+  formatted.daoTimelocks = {
+    badgerTimelock: {
+      address: daoTimelocks.badgerTimelock.address,
+      beneficiary: daoTimelocks.badgerTimelock.beneficiary,
+      locked: daoTimelocks.badgerTimelock.locked.toString(),
+      releaseTime: daoTimelocks.badgerTimelock.releaseTime.toString(),
+      token: daoTimelocks.badgerTimelock.token
+    },
+    diggTimelock: {
+      address: daoTimelocks.diggTimelock.address,
+      beneficiary: daoTimelocks.diggTimelock.beneficiary,
+      locked: daoTimelocks.diggTimelock.locked.toString(),
+      releaseTime: daoTimelocks.diggTimelock.releaseTime.toString(),
+      token: daoTimelocks.diggTimelock.token
+    },
+  }
   return formatted
 }
 
 export const formatStakingAssetsSnapshot = (snapshot: BadgerSnapshot): fStakingAssetsSnapshot => {
   const formatted = {} as fStakingAssetsSnapshot
+  console.log('formatStakingAssetsSnapshot')
 
   for (const key of Object.keys(snapshot.stakingAssets)) {
     const asset = snapshot.stakingAssets[key]
